@@ -140,7 +140,7 @@ router.post('/login', [
           avatar_url: user.avatar_url,
           role: user.role,
           status: user.status,
-          profile_completed: user.profile_completed
+          profile_completed: Boolean(user.profile_completed)
         },
         token
       }
@@ -170,6 +170,11 @@ router.get('/profile', authenticateToken, async (req, res) => {
     const user = users[0];
     // 移除敏感信息
     delete user.password_hash;
+    
+    // 确保布尔值正确转换
+    if (user.profile_completed !== undefined) {
+      user.profile_completed = Boolean(user.profile_completed);
+    }
 
     res.json({
       success: true,
@@ -312,7 +317,7 @@ router.post('/complete-profile', authenticateToken, [
           avatar_url: user.avatar_url,
           role: user.role,
           status: user.status,
-          profile_completed: user.profile_completed
+          profile_completed: Boolean(user.profile_completed)
         }
       }
     });

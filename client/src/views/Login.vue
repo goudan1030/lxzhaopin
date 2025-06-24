@@ -128,19 +128,26 @@ const handleSubmit = async () => {
     }
     
     if (result.success) {
+      console.log('操作成功，返回数据:', result);
+      
       if (isRegisterMode.value) {
         // 注册成功后跳转到完善资料页面
+        console.log('注册成功，跳转到完善资料页面');
         setTimeout(() => {
           router.push('/complete-profile');
         }, 1500);
       } else {
         // 登录成功后根据用户状态决定跳转路径
-        const user = result.data || result.user;
+        const userData = result.data;
+        console.log('登录成功，用户数据:', userData);
         let redirectPath = route.query.redirect || '/';
         
         // 如果用户未完善资料，跳转到完善资料页面
-        if (user && !user.profile_completed) {
+        if (userData && userData.profile_completed === false) {
+          console.log('用户未完善资料，跳转到完善资料页面');
           redirectPath = '/complete-profile';
+        } else {
+          console.log('用户已完善资料，跳转到:', redirectPath);
         }
         
         setTimeout(() => {

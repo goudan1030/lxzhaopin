@@ -174,6 +174,8 @@ const handleSubmit = async () => {
         duration: 2000
       })
       
+      console.log('资料完善成功，用户数据:', result.data)
+      
       // 延迟跳转到主页
       setTimeout(() => {
         router.push('/')
@@ -204,9 +206,16 @@ onMounted(() => {
     return
   }
   
-  // 如果已经完善过资料，可以选择跳转
+  // 如果已经完善过资料，可以选择跳转，但允许修改
   if (user.value.profile_completed) {
-    Toast('您已完善过资料')
+    Toast('您已完善过资料，可以修改')
+    // 预填充现有数据
+    if (user.value.nickname) {
+      nickname.value = user.value.nickname
+    }
+    if (user.value.avatar_url) {
+      avatarUrl.value = user.value.avatar_url
+    }
   }
 })
 </script>
