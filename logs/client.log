@@ -2,11 +2,8 @@
 > client@0.0.0 dev
 > vite
 
-Port 5173 is in use, trying another one...
 
-  VITE v6.3.5  ready in 217 ms
+  VITE v6.3.5  ready in 208 ms
 
-  ➜  Local:   http://localhost:5:36:19 PM [vite] (client) hmr update /src/style.css
-5:36:22 PM [vite] (client) hmr update /src/style.css
-5:36:31 PM [vite] (client) hmr update /src/views/Login.vue
-5:36:55 PM [vite] (client) hmr update /src/views/Login.vue
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose

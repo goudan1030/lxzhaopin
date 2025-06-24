@@ -16,8 +16,7 @@ function generateUUID() {
 // 注册路由
 router.post('/register', [
   body('phone').isMobilePhone('zh-CN').withMessage('请输入有效的手机号'),
-  body('password').isLength({ min: 6 }).withMessage('密码至少6位'),
-  body('name').isLength({ min: 1, max: 50 }).withMessage('姓名不能为空且不超过50字符')
+  body('password').isLength({ min: 6 }).withMessage('密码至少6位')
 ], async (req, res) => {
   try {
     // 验证输入
@@ -26,7 +25,7 @@ router.post('/register', [
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const { phone, password, name = '新用户' } = req.body;
+    const { phone, password } = req.body;
 
     // 检查手机号是否已存在
     const [existingUsers] = await pool.execute(
@@ -47,9 +46,9 @@ router.post('/register', [
 
     // 插入用户记录
     await pool.execute(
-      `INSERT INTO users (id, phone, email, password_hash, name, role, status) 
-       VALUES (?, ?, ?, ?, ?, 'user', 'active')`,
-      [userId, phone, email, passwordHash, name]
+      `INSERT INTO users (id, phone, email, password_hash, role, status) 
+       VALUES (?, ?, ?, ?, 'user', 'active')`,
+      [userId, phone, email, passwordHash]
     );
 
     // 生成JWT token
@@ -67,9 +66,12 @@ router.post('/register', [
           id: userId,
           phone,
           email,
-          name,
+          name: null,
+          nickname: null,
+          avatar_url: null,
           role: 'user',
-          status: 'active'
+          status: 'active',
+          profile_completed: false
         },
         token
       }
@@ -97,7 +99,7 @@ router.post('/login', [
 
     // 查询用户
     const [users] = await pool.execute(
-      'SELECT id, phone, email, password_hash, name, role, status FROM users WHERE phone = ?',
+      'SELECT id, phone, email, password_hash, name, nickname, avatar_url, role, status, profile_completed FROM users WHERE phone = ?',
       [phone]
     );
 
@@ -134,8 +136,11 @@ router.post('/login', [
           phone: user.phone,
           email: user.email,
           name: user.name,
+          nickname: user.nickname,
+          avatar_url: user.avatar_url,
           role: user.role,
-          status: user.status
+          status: user.status,
+          profile_completed: user.profile_completed
         },
         token
       }
@@ -189,7 +194,7 @@ router.put('/profile', authenticateToken, [
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const allowedFields = ['name', 'avatar_url'];
+    const allowedFields = ['name', 'nickname', 'avatar_url'];
     const profileFields = ['age', 'education', 'experience_years', 'location', 'bio'];
     
     const userUpdates = {};
@@ -254,6 +259,67 @@ router.put('/profile', authenticateToken, [
   } catch (error) {
     console.error('更新用户信息失败:', error);
     res.status(500).json({ error: '更新用户信息失败' });
+  }
+});
+
+// 完善用户资料 - 专门用于注册后的资料完善
+router.post('/complete-profile', authenticateToken, [
+  body('nickname').isLength({ min: 1, max: 50 }).withMessage('昵称不能为空且不超过50字符'),
+  body('avatar_url').optional().isURL().withMessage('头像URL格式不正确')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ error: errors.array()[0].msg });
+    }
+
+    const { nickname, avatar_url } = req.body;
+
+    // 更新用户信息，标记资料已完善
+    const updateFields = ['nickname = ?', 'profile_completed = TRUE', 'updated_at = CURRENT_TIMESTAMP'];
+    const updateValues = [nickname];
+
+    if (avatar_url) {
+      updateFields.push('avatar_url = ?');
+      updateValues.push(avatar_url);
+    }
+
+    updateValues.push(req.user.userId);
+
+    await pool.execute(
+      `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
+      updateValues
+    );
+
+    // 获取更新后的用户信息
+    const [users] = await pool.execute(
+      'SELECT id, phone, email, name, nickname, avatar_url, role, status, profile_completed FROM users WHERE id = ?',
+      [req.user.userId]
+    );
+
+    const user = users[0];
+
+    res.json({
+      success: true,
+      message: '资料完善成功',
+      data: {
+        user: {
+          id: user.id,
+          phone: user.phone,
+          email: user.email,
+          name: user.name,
+          nickname: user.nickname,
+          avatar_url: user.avatar_url,
+          role: user.role,
+          status: user.status,
+          profile_completed: user.profile_completed
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('完善资料失败:', error);
+    res.status(500).json({ error: '完善资料失败，请稍后重试' });
   }
 });
 

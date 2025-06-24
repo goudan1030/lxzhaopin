@@ -86,11 +86,10 @@ class ApiService {
   // 认证相关API
   auth = {
     // 注册
-    register: async (phone, password, name = '新用户') => {
+    register: async (phone, password) => {
       const response = await this.post('/auth/register', {
         phone,
-        password,
-        name
+        password
       });
       
       if (response.success && response.data.token) {
@@ -122,6 +121,11 @@ class ApiService {
     // 更新用户信息
     updateProfile: async (updates) => {
       return this.put('/auth/profile', updates);
+    },
+
+    // 完善用户资料
+    completeProfile: async (profileData) => {
+      return this.post('/auth/complete-profile', profileData);
     },
 
     // 登出

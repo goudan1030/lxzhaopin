@@ -128,10 +128,25 @@ const handleSubmit = async () => {
     }
     
     if (result.success) {
-      const redirectPath = route.query.redirect || '/';
-      setTimeout(() => {
-        router.push(redirectPath);
-      }, 1500);
+      if (isRegisterMode.value) {
+        // 注册成功后跳转到完善资料页面
+        setTimeout(() => {
+          router.push('/complete-profile');
+        }, 1500);
+      } else {
+        // 登录成功后根据用户状态决定跳转路径
+        const user = result.data || result.user;
+        let redirectPath = route.query.redirect || '/';
+        
+        // 如果用户未完善资料，跳转到完善资料页面
+        if (user && !user.profile_completed) {
+          redirectPath = '/complete-profile';
+        }
+        
+        setTimeout(() => {
+          router.push(redirectPath);
+        }, 1500);
+      }
     }
   } catch (error) {
     Toast.fail({

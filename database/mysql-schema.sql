@@ -12,15 +12,18 @@ CREATE TABLE `users` (
     `phone` VARCHAR(11) UNIQUE NOT NULL,
     `email` VARCHAR(100) UNIQUE NOT NULL,
     `password_hash` VARCHAR(255) NOT NULL,
-    `name` VARCHAR(50) NOT NULL,
-    `avatar_url` TEXT,
+    `name` VARCHAR(50) DEFAULT NULL, -- 真实姓名，可为空
+    `nickname` VARCHAR(50) DEFAULT NULL, -- 昵称/用户名，可为空
+    `avatar_url` TEXT DEFAULT NULL, -- 头像URL，可为空
     `role` ENUM('user', 'admin') DEFAULT 'user',
     `status` ENUM('active', 'inactive', 'banned') DEFAULT 'active',
+    `profile_completed` BOOLEAN DEFAULT FALSE, -- 是否完成资料填写
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX `idx_users_phone` (`phone`),
     INDEX `idx_users_email` (`email`),
-    INDEX `idx_users_status` (`status`)
+    INDEX `idx_users_status` (`status`),
+    INDEX `idx_users_profile_completed` (`profile_completed`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 用户详细信息表 (user_profiles)

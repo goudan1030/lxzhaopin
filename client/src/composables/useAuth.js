@@ -64,6 +64,33 @@ export function useAuth() {
     }
   }
 
+  // 完善用户资料
+  const completeProfile = async (profileData) => {
+    if (!user.value?.id) {
+      throw new Error('用户未登录')
+    }
+
+    loading.value = true
+    try {
+      const response = await apiService.auth.completeProfile(profileData)
+
+      if (response.success) {
+        user.value = response.data.user
+        return { success: true, data: response.data.user }
+      }
+
+      throw new Error(response.error || '完善资料失败')
+    } catch (error) {
+      console.error('完善资料失败:', error)
+      return { 
+        success: false, 
+        error: error.message || '完善资料失败'
+      }
+    } finally {
+      loading.value = false
+    }
+  }
+
   // 更新用户资料
   const updateProfile = async (updates) => {
     if (!user.value?.id) {
@@ -148,6 +175,7 @@ export function useAuth() {
     // 方法
     initAuth,
     loginWithPhone,
+    completeProfile,
     updateProfile,
     logout,
     requireAuth,

@@ -1,168 +1,322 @@
 <template>
   <div class="complete-profile-page">
+    <van-nav-bar 
+      title="完善资料" 
+      left-arrow 
+      @click-left="goBack"
+      fixed
+      placeholder
+    />
+    
     <div class="profile-form-container">
-      <div class="avatar-uploader">
-        <div class="avatar-placeholder" @click="uploadAvatar">头像</div>
-        <p>点击设置头像</p>
+      <!-- 头像上传区域 -->
+      <div class="avatar-section">
+        <div class="avatar-uploader" @click="handleAvatarUpload">
+          <div v-if="avatarUrl" class="avatar-preview">
+            <img :src="avatarUrl" alt="头像" />
+          </div>
+          <div v-else class="avatar-placeholder">
+            <van-icon name="photo" size="30" />
+            <p>设置头像</p>
+          </div>
+        </div>
+        <p class="avatar-tip">点击设置个人头像</p>
       </div>
       
-      <div class="form-group">
-        <label for="profile-name">昵称</label>
-        <input 
-          type="text" 
-          id="profile-name" 
-          v-model="profileName" 
+      <!-- 昵称输入 -->
+      <div class="form-section">
+        <van-field
+          v-model="nickname"
+          label="昵称"
           placeholder="请输入你的昵称"
-          class="form-input"
-        >
+          required
+          :error-message="nicknameError"
+          @input="validateNickname"
+        />
       </div>
       
-      <button @click="saveProfile" class="btn-submit">完成，进入应用</button>
+      <!-- 提交按钮 -->
+      <div class="submit-section">
+        <van-button 
+          type="primary" 
+          size="large" 
+          :loading="loading"
+          @click="handleSubmit"
+          class="submit-btn"
+        >
+          完成，进入应用
+        </van-button>
+      </div>
     </div>
     
-    <!-- Floating back button -->
-    <button class="floating-back-btn" @click="goBack">&lt;</button>
+    <!-- 头像上传弹窗 -->
+    <van-action-sheet 
+      v-model:show="showAvatarSheet" 
+      :actions="avatarActions" 
+      cancel-text="取消"
+      @select="onAvatarAction"
+    />
+    
+    <!-- 文件上传 -->
+    <input 
+      ref="fileInput" 
+      type="file" 
+      accept="image/*" 
+      style="display: none" 
+      @change="handleFileSelect" 
+    />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { Toast } from 'vant'
+import { useAuth } from '../composables/useAuth'
 
-const router = useRouter();
-const profileName = ref('');
+const router = useRouter()
+const { user, completeProfile, loading } = useAuth()
 
-const uploadAvatar = () => {
-  // 模拟头像上传功能
-  alert('头像上传功能暂未开放');
-};
+// 表单数据
+const nickname = ref('')
+const avatarUrl = ref('')
+const nicknameError = ref('')
 
-const saveProfile = () => {
-  if (!profileName.value.trim()) {
-    alert('请填写昵称');
-    return;
+// 头像上传相关
+const showAvatarSheet = ref(false)
+const fileInput = ref(null)
+
+const avatarActions = [
+  { name: '拍照', value: 'camera' },
+  { name: '从相册选择', value: 'album' },
+  { name: '使用默认头像', value: 'default' }
+]
+
+// 验证昵称
+const validateNickname = () => {
+  nicknameError.value = ''
+  if (!nickname.value.trim()) {
+    nicknameError.value = '昵称不能为空'
+    return false
+  }
+  if (nickname.value.length > 50) {
+    nicknameError.value = '昵称不能超过50个字符'
+    return false
+  }
+  return true
+}
+
+// 头像上传
+const handleAvatarUpload = () => {
+  showAvatarSheet.value = true
+}
+
+const onAvatarAction = (action) => {
+  showAvatarSheet.value = false
+  
+  switch (action.value) {
+    case 'camera':
+    case 'album':
+      fileInput.value?.click()
+      break
+    case 'default':
+      avatarUrl.value = '/64.jpeg' // 使用项目中的默认头像
+      Toast.success('已设置默认头像')
+      break
+  }
+}
+
+const handleFileSelect = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  // 验证文件类型
+  if (!file.type.startsWith('image/')) {
+    Toast.fail('请选择图片文件')
+    return
   }
   
-  // 模拟保存个人信息
-  console.log('Profile Saved:', { name: profileName.value });
-  alert('信息完善成功！');
+  // 验证文件大小 (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    Toast.fail('图片大小不能超过5MB')
+    return
+  }
   
-  // 跳转到主页
-  router.push('/');
-};
+  // 创建预览
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    avatarUrl.value = e.target.result
+    Toast.success('头像已选择')
+  }
+  reader.readAsDataURL(file)
+}
+
+// 提交表单
+const handleSubmit = async () => {
+  if (!validateNickname()) {
+    return
+  }
+  
+  try {
+    const profileData = {
+      nickname: nickname.value.trim()
+    }
+    
+    if (avatarUrl.value) {
+      profileData.avatar_url = avatarUrl.value
+    }
+    
+    const result = await completeProfile(profileData)
+    
+    if (result.success) {
+      Toast.success({
+        message: '🎉 资料完善成功！',
+        duration: 2000
+      })
+      
+      // 延迟跳转到主页
+      setTimeout(() => {
+        router.push('/')
+      }, 1500)
+    } else {
+      Toast.fail({
+        message: `❌ ${result.error}`,
+        duration: 3000
+      })
+    }
+  } catch (error) {
+    Toast.fail({
+      message: `❌ ${error.message || '完善资料失败'}`,
+      duration: 3000
+    })
+  }
+}
 
 const goBack = () => {
-  router.back();
-};
+  router.back()
+}
+
+onMounted(() => {
+  // 检查用户是否已登录
+  if (!user.value) {
+    Toast.fail('请先登录')
+    router.push('/login')
+    return
+  }
+  
+  // 如果已经完善过资料，可以选择跳转
+  if (user.value.profile_completed) {
+    Toast('您已完善过资料')
+  }
+})
 </script>
 
 <style scoped>
-/* 严格按照HTML文档样式 */
 .complete-profile-page {
-  background-color: var(--card-background);
   min-height: 100vh;
-  position: relative;
+  background-color: #f8f9fa;
 }
 
 .profile-form-container {
-  width: 100%;
-  max-width: 400px;
   padding: 20px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 100vh;
+  padding-top: 20px;
+}
+
+.avatar-section {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-top: 20px;
 }
 
 .avatar-uploader {
-  margin-bottom: 30px;
-  text-align: center;
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 15px;
+  cursor: pointer;
+}
+
+.avatar-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #f0f0f0;
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .avatar-placeholder {
-  width: 90px;
-  height: 90px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  background-color: var(--primary-light);
-  color: var(--primary-color);
+  background-color: #f7f8fa;
+  border: 2px dashed #dcdee0;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  font-size: 1.2em;
-  margin: 0 auto 10px;
-  cursor: pointer;
-  border: 2px dashed var(--primary-color);
+  color: #969799;
+  transition: all 0.3s;
 }
 
-.avatar-uploader p {
-  font-size: 0.9em;
-  color: var(--text-secondary);
+.avatar-placeholder:hover {
+  border-color: #1989fa;
+  color: #1989fa;
+  background-color: #f2f3ff;
 }
 
-.form-group {
-  margin-bottom: 20px;
-  text-align: left;
+.avatar-placeholder p {
+  margin-top: 5px;
+  font-size: 12px;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: var(--text-secondary);
+.avatar-tip {
+  color: #969799;
+  font-size: 14px;
+  margin: 0;
 }
 
-.form-input {
-  width: 100%;
-  padding: 12px 15px;
-  font-size: 1em;
+.form-section {
+  margin-bottom: 30px;
+  background-color: white;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background-color: var(--background-color);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
 }
 
-.form-input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px var(--primary-light);
+.submit-section {
+  margin-top: 40px;
 }
 
-.btn-submit {
+.submit-btn {
   width: 100%;
-  padding: 15px;
-  border: none;
-  border-radius: 8px;
-  background-color: var(--primary-color);
-  color: white;
-  font-size: 1.1em;
+  height: 50px;
+  border-radius: 25px;
+  font-size: 16px;
   font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s, transform 0.2s;
 }
 
-.btn-submit:active {
-  transform: scale(0.98);
-  background-color: #2B6CB0; /* Darker blue */
+/* Vant组件样式覆盖 */
+:deep(.van-field__label) {
+  font-weight: 500;
+  color: #323233;
 }
 
-/* Floating Back Button */
-.floating-back-btn {
-  position: fixed;
-  bottom: 25px;
-  left: 20px;
-  width: 45px;
-  height: 45px;
-  background-color: var(--primary-color);
-  opacity: 0.8;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  font-size: 24px;
-  line-height: 45px;
-  text-align: center;
-  cursor: pointer;
-  z-index: 1000;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+:deep(.van-field__control) {
+  font-size: 16px;
+}
+
+:deep(.van-nav-bar) {
+  background-color: white;
+  border-bottom: 1px solid #ebedf0;
+}
+
+:deep(.van-nav-bar__title) {
+  font-weight: 600;
+  color: #323233;
 }
 </style> 
