@@ -4,7 +4,10 @@
 
 Port 5173 is in use, trying another one...
 
-  VITE v6.3.5  ready in 161 ms
+  VITE v6.3.5  ready in 180 ms
 
-  ➜  Local:   http://localhost:5174/
-  ➜  Network: use --host to expose
+  ➜  Local:   http://localhost:5:50:39 PM [vite] (client) hmr update /src/views/Login.vue
+5:50:56 PM [vite] (client) hmr update /src/views/Login.vue
+5:51:18 PM [vite] (client) page reload src/main.js
+5:51:29 PM [vite] (client) page reload src/main.js
+5:51:49 PM [vite] (client) page reload src/router/index.js

@@ -137,12 +137,14 @@ const handleSubmit = async () => {
           router.push('/complete-profile');
         }, 1500);
       } else {
-        // 登录成功后根据用户状态决定跳转路径
+        // 登录成功后，检查用户资料完善状态
+        console.log('登录成功，检查用户资料状态...');
         const userData = result.data;
-        console.log('登录成功，用户数据:', userData);
+        console.log('用户数据:', userData);
+        
         let redirectPath = route.query.redirect || '/';
         
-        // 如果用户未完善资料，跳转到完善资料页面
+        // 检查用户是否完善了资料
         if (userData && userData.profile_completed === false) {
           console.log('用户未完善资料，跳转到完善资料页面');
           redirectPath = '/complete-profile';
@@ -151,6 +153,7 @@ const handleSubmit = async () => {
         }
         
         setTimeout(() => {
+          console.log('执行跳转到:', redirectPath);
           router.push(redirectPath);
         }, 1500);
       }

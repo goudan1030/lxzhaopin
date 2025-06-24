@@ -5,7 +5,7 @@ import router from './router'
 import { useAuth } from './composables/useAuth'
 
 // Vant 组件
-import { Tabbar, TabbarItem, Tab, Tabs, NavBar, Button, Field, CellGroup, Cell, Form, Dialog, Toast, Notify } from 'vant'
+import { Tabbar, TabbarItem, Tab, Tabs, NavBar, Button, Field, CellGroup, Cell, Form, Dialog, Toast, Notify, Icon, ActionSheet } from 'vant'
 import 'vant/lib/index.css'
 
 import './style.css'
@@ -30,6 +30,8 @@ app.use(Form)
 app.use(Dialog)
 app.use(Toast)
 app.use(Notify)
+app.use(Icon)
+app.use(ActionSheet)
 
 // 初始化认证状态
 const { initAuth } = useAuth()
