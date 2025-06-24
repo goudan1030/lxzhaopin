@@ -154,6 +154,7 @@ const handleSubmit = async () => {
         
         setTimeout(() => {
           console.log('执行跳转到:', redirectPath);
+          console.log('当前token:', localStorage.getItem('auth_token'));
           router.push(redirectPath);
         }, 1500);
       }

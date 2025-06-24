@@ -31,7 +31,10 @@
           placeholder="请输入你的昵称"
           required
           :error-message="nicknameError"
-          @input="validateNickname"
+          maxlength="20"
+          show-word-limit
+          @input="onNicknameInput"
+          @blur="validateNickname"
         />
       </div>
       
@@ -75,7 +78,7 @@ import { Toast } from 'vant'
 import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
-const { user, completeProfile, loading } = useAuth()
+const { user, completeProfile, loading, initAuth } = useAuth()
 
 // 表单数据
 const nickname = ref('')
@@ -92,17 +95,82 @@ const avatarActions = [
   { name: '使用默认头像', value: 'default' }
 ]
 
+// 违禁词列表
+const forbiddenWords = [
+  // 管理员相关
+  '管理员', '超级管理员', '系统管理员', 'admin', 'administrator', '站长', '客服',
+  // 官方相关
+  '官方', '官网', '系统', 'system', '兰溪招聘', '平台', '网站',
+  // 敏感词汇
+  '色情', '赌博', '毒品', '暴力', '恐怖', '政治', '反动', '邪教',
+  // 特殊字符和数字
+  'null', 'undefined', 'NaN', '测试', 'test', '临时'
+]
+
+// 输入防抖定时器
+let validateTimer = null
+
+// 实时验证昵称（防抖）
+const onNicknameInput = () => {
+  // 清除之前的定时器
+  if (validateTimer) {
+    clearTimeout(validateTimer)
+  }
+  
+  // 设置新的定时器，500ms后执行验证
+  validateTimer = setTimeout(() => {
+    validateNickname()
+  }, 500)
+}
+
 // 验证昵称
 const validateNickname = () => {
   nicknameError.value = ''
-  if (!nickname.value.trim()) {
+  
+  const trimmedNickname = nickname.value.trim()
+  
+  console.log('验证昵称:', trimmedNickname, '长度:', trimmedNickname.length)
+  
+  // 检查是否为空
+  if (!trimmedNickname) {
     nicknameError.value = '昵称不能为空'
     return false
   }
-  if (nickname.value.length > 50) {
-    nicknameError.value = '昵称不能超过50个字符'
+  
+  // 检查长度
+  if (trimmedNickname.length < 2) {
+    nicknameError.value = '昵称至少需要2个字符'
     return false
   }
+  
+  if (trimmedNickname.length > 20) {
+    nicknameError.value = '昵称不能超过20个字符'
+    return false
+  }
+  
+  // 检查特殊字符（只允许中文、英文、数字、下划线、连字符）
+  const allowedPattern = /^[\u4e00-\u9fa5a-zA-Z0-9_-]+$/
+  if (!allowedPattern.test(trimmedNickname)) {
+    nicknameError.value = '昵称只能包含中文、英文、数字、下划线和连字符'
+    return false
+  }
+  
+  // 检查违禁词
+  const lowerNickname = trimmedNickname.toLowerCase()
+  for (const word of forbiddenWords) {
+    if (lowerNickname.includes(word.toLowerCase())) {
+      nicknameError.value = `昵称不能包含敏感词汇: ${word}`
+      return false
+    }
+  }
+  
+  // 检查是否全是数字
+  if (/^\d+$/.test(trimmedNickname)) {
+    nicknameError.value = '昵称不能全是数字'
+    return false
+  }
+  
+  console.log('昵称验证通过')
   return true
 }
 
@@ -136,17 +204,63 @@ const handleFileSelect = (event) => {
     return
   }
   
-  // 验证文件大小 (5MB)
-  if (file.size > 5 * 1024 * 1024) {
-    Toast.fail('图片大小不能超过5MB')
+  // 验证文件大小 (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    Toast.fail('图片大小不能超过10MB')
     return
   }
   
-  // 创建预览
+  // 压缩图片并转换为base64
+  compressAndConvertImage(file)
+}
+
+// 压缩图片并转换为base64格式
+const compressAndConvertImage = (file) => {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  const img = new Image()
+  
+  img.onload = () => {
+    // 设置压缩后的尺寸（最大300x300）
+    const maxSize = 300
+    let { width, height } = img
+    
+    if (width > height) {
+      if (width > maxSize) {
+        height = (height * maxSize) / width
+        width = maxSize
+      }
+    } else {
+      if (height > maxSize) {
+        width = (width * maxSize) / height
+        height = maxSize
+      }
+    }
+    
+    canvas.width = width
+    canvas.height = height
+    
+    // 绘制压缩后的图片
+    ctx.drawImage(img, 0, 0, width, height)
+    
+    // 转换为base64格式（JPEG格式，质量0.8）
+    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8)
+    
+    console.log('原图大小:', (file.size / 1024).toFixed(2) + 'KB')
+    console.log('压缩后大小:', (compressedBase64.length * 0.75 / 1024).toFixed(2) + 'KB')
+    
+    avatarUrl.value = compressedBase64
+    Toast.success('头像已选择并压缩')
+  }
+  
+  img.onerror = () => {
+    Toast.fail('图片加载失败')
+  }
+  
+  // 读取文件
   const reader = new FileReader()
   reader.onload = (e) => {
-    avatarUrl.value = e.target.result
-    Toast.success('头像已选择')
+    img.src = e.target.result
   }
   reader.readAsDataURL(file)
 }
@@ -198,13 +312,42 @@ const goBack = () => {
   router.back()
 }
 
-onMounted(() => {
-  // 检查用户是否已登录
-  if (!user.value) {
+onMounted(async () => {
+  console.log('CompleteProfile页面mounted，当前用户状态:', user.value)
+  console.log('当前token:', localStorage.getItem('auth_token'))
+  
+  // 如果没有token，跳转到登录页
+  const token = localStorage.getItem('auth_token')
+  if (!token) {
+    console.log('没有token，跳转到登录页')
     Toast.fail('请先登录')
     router.push('/login')
     return
   }
+  
+  // 如果用户状态为空，先初始化
+  if (!user.value) {
+    console.log('用户状态为空，尝试初始化认证状态')
+    try {
+      await initAuth()
+      console.log('认证状态初始化后，用户状态:', user.value)
+    } catch (error) {
+      console.error('初始化认证状态失败:', error)
+      Toast.fail('获取用户信息失败')
+      router.push('/login')
+      return
+    }
+  }
+  
+  // 再次检查用户是否已登录
+  if (!user.value) {
+    console.log('初始化后用户状态仍为空，跳转到登录页')
+    Toast.fail('请先登录')
+    router.push('/login')
+    return
+  }
+  
+  console.log('用户状态正常，profile_completed:', user.value.profile_completed)
   
   // 如果已经完善过资料，可以选择跳转，但允许修改
   if (user.value.profile_completed) {

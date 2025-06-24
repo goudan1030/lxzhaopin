@@ -267,10 +267,74 @@ router.put('/profile', authenticateToken, [
   }
 });
 
+// 违禁词列表
+const forbiddenWords = [
+  // 管理员相关
+  '管理员', '超级管理员', '系统管理员', 'admin', 'administrator', '站长', '客服',
+  // 官方相关
+  '官方', '官网', '系统', 'system', '兰溪招聘', '平台', '网站',
+  // 敏感词汇
+  '色情', '赌博', '毒品', '暴力', '恐怖', '政治', '反动', '邪教',
+  // 特殊字符和数字
+  'null', 'undefined', 'NaN', '测试', 'test', '临时'
+];
+
+// 验证昵称函数
+function validateNickname(nickname) {
+  const trimmed = nickname.trim();
+  
+  // 检查长度
+  if (trimmed.length < 2) {
+    return { isValid: false, message: '昵称至少需要2个字符' };
+  }
+  
+  if (trimmed.length > 20) {
+    return { isValid: false, message: '昵称不能超过20个字符' };
+  }
+  
+  // 检查特殊字符
+  const allowedPattern = /^[\u4e00-\u9fa5a-zA-Z0-9_-]+$/;
+  if (!allowedPattern.test(trimmed)) {
+    return { isValid: false, message: '昵称只能包含中文、英文、数字、下划线和连字符' };
+  }
+  
+  // 检查违禁词
+  const lowerNickname = trimmed.toLowerCase();
+  for (const word of forbiddenWords) {
+    if (lowerNickname.includes(word.toLowerCase())) {
+      return { isValid: false, message: `昵称不能包含敏感词汇: ${word}` };
+    }
+  }
+  
+  // 检查是否全是数字
+  if (/^\d+$/.test(trimmed)) {
+    return { isValid: false, message: '昵称不能全是数字' };
+  }
+  
+  return { isValid: true };
+}
+
 // 完善用户资料 - 专门用于注册后的资料完善
 router.post('/complete-profile', authenticateToken, [
-  body('nickname').isLength({ min: 1, max: 50 }).withMessage('昵称不能为空且不超过50字符'),
-  body('avatar_url').optional().isURL().withMessage('头像URL格式不正确')
+  body('nickname').custom((value) => {
+    if (!value || !value.trim()) {
+      throw new Error('昵称不能为空');
+    }
+    
+    const validation = validateNickname(value);
+    if (!validation.isValid) {
+      throw new Error(validation.message);
+    }
+    
+    return true;
+  }),
+  body('avatar_url').optional().custom((value) => {
+    // 允许URL或base64格式的图片数据
+    if (value && !value.match(/^https?:\/\//) && !value.match(/^data:image\/(jpeg|jpg|png|gif|webp);base64,/)) {
+      throw new Error('头像必须是有效的URL或base64格式的图片数据');
+    }
+    return true;
+  })
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
