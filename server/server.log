@@ -1,0 +1,11 @@
+
+> lxzhaopin-server@1.0.0 start
+> node app.js
+
+Ignoring invalid configuration option passed to Connection: acquireTimeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+Ignoring invalid configuration option passed to Connection: timeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+✅ 数据库连接成功!
+🚀 服务器启动成功！
+📱 API地址: http://localhost:3000/api
+🔍 健康检查: http://localhost:3000/api/health
+🌍 环境: development

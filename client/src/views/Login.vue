@@ -74,17 +74,26 @@ const handleSubmit = async () => {
   const { phone, password, confirmPassword } = formData.value;
   
   if (!phone || phone.length !== 11) {
-    Toast('请输入有效的11位手机号');
+    Toast.fail({
+      message: '⚠️ 请输入有效的11位手机号',
+      duration: 2000
+    });
     return;
   }
   
   if (!password || password.length < 6) {
-    Toast('密码至少6位');
+    Toast.fail({
+      message: '⚠️ 密码至少6位',
+      duration: 2000
+    });
     return;
   }
   
   if (isRegisterMode.value && password !== confirmPassword) {
-    Toast('两次密码不一致');
+    Toast.fail({
+      message: '⚠️ 两次密码不一致',
+      duration: 2000
+    });
     return;
   }
   
@@ -93,12 +102,28 @@ const handleSubmit = async () => {
     if (isRegisterMode.value) {
       result = await register(phone, password);
       if (result.success) {
-        Toast.success('注册成功！');
+        Toast.success({
+          message: '🎉 注册成功！',
+          duration: 2000
+        });
+      } else {
+        Toast.fail({
+          message: `❌ ${result.error || '注册失败'}`,
+          duration: 3000
+        });
       }
     } else {
       result = await login(phone, password);
       if (result.success) {
-        Toast.success('登录成功！');
+        Toast.success({
+          message: '🎉 登录成功！',
+          duration: 2000
+        });
+      } else {
+        Toast.fail({
+          message: `❌ ${result.error || '登录失败'}`,
+          duration: 3000
+        });
       }
     }
     
@@ -106,10 +131,13 @@ const handleSubmit = async () => {
       const redirectPath = route.query.redirect || '/';
       setTimeout(() => {
         router.push(redirectPath);
-      }, 1000);
+      }, 1500);
     }
   } catch (error) {
-    Toast(error.message || '操作失败');
+    Toast.fail({
+      message: `❌ ${error.message || '操作失败'}`,
+      duration: 3000
+    });
   }
 };
 </script>
