@@ -8,7 +8,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 -- 用户表 (users) - 存储用户基本信息
 CREATE TABLE `users` (
-    `id` VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    `id` VARCHAR(36) PRIMARY KEY,
     `phone` VARCHAR(11) UNIQUE NOT NULL,
     `email` VARCHAR(100) UNIQUE NOT NULL,
     `password_hash` VARCHAR(255) NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE `users` (
 
 -- 用户详细信息表 (user_profiles)
 CREATE TABLE `user_profiles` (
-    `id` VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    `id` VARCHAR(36) PRIMARY KEY,
     `user_id` VARCHAR(36) NOT NULL,
     `age` INT,
     `education` VARCHAR(50),
@@ -41,7 +41,7 @@ CREATE TABLE `user_profiles` (
 
 -- 公司信息表 (companies)
 CREATE TABLE `companies` (
-    `id` VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    `id` VARCHAR(36) PRIMARY KEY,
     `name` VARCHAR(100) NOT NULL,
     `logo_url` TEXT,
     `description` TEXT,
@@ -59,7 +59,7 @@ CREATE TABLE `companies` (
 
 -- 职位分类表 (job_categories)
 CREATE TABLE `job_categories` (
-    `id` VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    `id` VARCHAR(36) PRIMARY KEY,
     `name` VARCHAR(50) NOT NULL UNIQUE,
     `description` TEXT,
     `sort_order` INT DEFAULT 0,
@@ -69,7 +69,7 @@ CREATE TABLE `job_categories` (
 
 -- 招聘职位表 (jobs)
 CREATE TABLE `jobs` (
-    `id` VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    `id` VARCHAR(36) PRIMARY KEY,
     `title` VARCHAR(100) NOT NULL,
     `company_id` VARCHAR(36),
     `category_id` VARCHAR(36),
@@ -123,7 +123,7 @@ CREATE TABLE `jobs` (
 
 -- 求职人才表 (talents)
 CREATE TABLE `talents` (
-    `id` VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    `id` VARCHAR(36) PRIMARY KEY,
     `user_id` VARCHAR(36) NOT NULL,
     
     -- 基本信息
@@ -171,7 +171,7 @@ CREATE TABLE `talents` (
 
 -- 找活广场表 (plaza_posts)
 CREATE TABLE `plaza_posts` (
-    `id` VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    `id` VARCHAR(36) PRIMARY KEY,
     `user_id` VARCHAR(36) NOT NULL,
     
     -- 发布内容
@@ -205,7 +205,7 @@ CREATE TABLE `plaza_posts` (
 
 -- 评论表 (comments)
 CREATE TABLE `comments` (
-    `id` VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    `id` VARCHAR(36) PRIMARY KEY,
     `plaza_post_id` VARCHAR(36) NOT NULL,
     `user_id` VARCHAR(36) NOT NULL,
     `parent_id` VARCHAR(36),
@@ -230,7 +230,7 @@ CREATE TABLE `comments` (
 
 -- 点赞表 (likes)
 CREATE TABLE `likes` (
-    `id` VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    `id` VARCHAR(36) PRIMARY KEY,
     `user_id` VARCHAR(36) NOT NULL,
     `plaza_post_id` VARCHAR(36) NOT NULL,
     
@@ -246,7 +246,7 @@ CREATE TABLE `likes` (
 
 -- 收藏表 (favorites)
 CREATE TABLE `favorites` (
-    `id` VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    `id` VARCHAR(36) PRIMARY KEY,
     `user_id` VARCHAR(36) NOT NULL,
     
     -- 收藏类型和对象ID
@@ -264,7 +264,7 @@ CREATE TABLE `favorites` (
 
 -- 求职申请表 (job_applications)
 CREATE TABLE `job_applications` (
-    `id` VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    `id` VARCHAR(36) PRIMARY KEY,
     `job_id` VARCHAR(36) NOT NULL,
     `applicant_id` VARCHAR(36) NOT NULL,
     `talent_id` VARCHAR(36),
@@ -292,7 +292,7 @@ CREATE TABLE `job_applications` (
 
 -- 通知表 (notifications)
 CREATE TABLE `notifications` (
-    `id` VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    `id` VARCHAR(36) PRIMARY KEY,
     `user_id` VARCHAR(36) NOT NULL,
     
     -- 通知内容
@@ -315,15 +315,15 @@ CREATE TABLE `notifications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 插入初始职位分类数据
-INSERT INTO `job_categories` (`name`, `description`, `sort_order`) VALUES
-('技术开发', 'IT技术相关职位', 1),
-('产品运营', '产品和运营相关职位', 2),
-('设计创意', '设计和创意相关职位', 3),
-('市场销售', '市场营销和销售职位', 4),
-('行政人事', '行政管理和人事职位', 5),
-('财务法务', '财务和法务相关职位', 6),
-('生产制造', '生产和制造相关职位', 7),
-('服务行业', '服务业相关职位', 8),
-('其他', '其他类型职位', 9);
+INSERT INTO `job_categories` (`id`, `name`, `description`, `sort_order`) VALUES
+(UUID(), '技术开发', 'IT技术相关职位', 1),
+(UUID(), '产品运营', '产品和运营相关职位', 2),
+(UUID(), '设计创意', '设计和创意相关职位', 3),
+(UUID(), '市场销售', '市场营销和销售职位', 4),
+(UUID(), '行政人事', '行政管理和人事职位', 5),
+(UUID(), '财务法务', '财务和法务相关职位', 6),
+(UUID(), '生产制造', '生产和制造相关职位', 7),
+(UUID(), '服务行业', '服务业相关职位', 8),
+(UUID(), '其他', '其他类型职位', 9);
 
 SET FOREIGN_KEY_CHECKS = 1; 

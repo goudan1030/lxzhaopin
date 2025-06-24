@@ -20,6 +20,8 @@
 5. 复制粘贴 `database/mysql-schema.sql` 文件内容
 6. 点击 "执行"
 
+**注意**：修复后的SQL脚本已经移除了DEFAULT (UUID())语法，改为在后端代码中生成UUID，避免MySQL版本兼容问题。
+
 ### 3. 检查数据库
 确认以下表已创建：
 - users (用户表)
