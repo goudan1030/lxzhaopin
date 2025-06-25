@@ -1,65 +1,70 @@
 <template>
   <div class="job-list-container">
-    <JobCard v-for="(job, index) in jobs" :key="index" :job="job" :index="index" />
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+      <div v-if="loading && !refreshing" class="loading-container">
+        <div class="loading-text">加载中...</div>
+      </div>
+      <div v-else-if="jobs.length === 0" class="empty-container">
+        <div class="empty-text">暂无招聘信息</div>
+      </div>
+      <div v-else>
+        <JobCard v-for="(job, index) in jobs" :key="index" :job="job" :index="index" />
+      </div>
+    </van-pull-refresh>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import JobCard from './JobCard.vue';
+import apiService from '../services/apiService';
 
-const jobs = ref([
-  {
-      title: '高级前端开发工程师',
-      company: '技术有限公司',
-      location: '上海',
-      salary: '25-45K·14薪',
-      tags: ['React', 'TypeScript', 'Node.js', '5-10年'],
-      recruits: '5人',
-      benefits: ['五险一金', '周末双休', '年终分红', '带薪年假'],
-      contactPhone: '13812345678',
-      description: '负责核心产品的Web前端架构设计和开发，推动团队技术成长。参与产品需求分析，完成前端开发工作，确保用户体验的优化。',
-      requirements: [
-        '计算机相关专业本科及以上学历',
-        '五年以上前端开发经验',
-        '精通React、Vue等至少一种主流框架',
-        '熟悉Node.js，有全栈开发经验者优先'
-      ]
-  },
-  {
-      title: '产品经理',
-      company: '创意无限公司',
-      location: '深圳',
-      salary: '20-40K',
-      tags: ['用户体验', '市场分析', '3-5年'],
-      recruits: '若干',
-      benefits: ['弹性工作', '定期体检', '零食下午茶'],
-      contactPhone: '13987654321',
-      description: '负责规划产品发展路线图，深度挖掘用户需求，完成产品设计。与技术团队密切合作，推动产品功能的实现和优化。',
-      requirements: [
-        '3年以上互联网产品经理经验',
-        '熟悉移动端产品设计，有成功案例',
-        '具备优秀的数据分析和逻辑思维能力'
-      ]
-  },
-  {
-      title: 'Java后端开发',
-      company: '数据科技',
-      location: '杭州',
-      salary: '18-35K',
-      tags: ['Java', 'Spring', 'MySQL', '3-5年'],
-      recruits: '10人',
-      benefits: ['股票期权', '岗位晋升', '免费班车'],
-      contactPhone: '13766667777',
-      description: '负责核心业务系统的后端开发，参与系统架构设计和技术选型。优化系统性能，确保高并发场景下的稳定性。',
-      requirements: [
-        'Java开发3年以上经验',
-        '熟练掌握Spring、SpringBoot框架',
-        '有大型分布式系统开发经验',
-        '熟悉MySQL、Redis等数据存储技术'
-      ]
-  },
-]);
+const jobs = ref([]);
+const loading = ref(true);
+const refreshing = ref(false);
+
+// 加载招聘数据
+const loadJobs = async () => {
+  try {
+    loading.value = true;
+    const response = await apiService.posts.getPublicJobs();
+    if (response.success) {
+      // 转换数据格式以匹配JobCard组件期望的格式
+      jobs.value = response.data.map(job => ({
+        id: job.id, // 添加ID字段
+        title: job.title,
+        company: job.publisher_name || '未知公司', // 使用发布者昵称作为公司名
+        location: job.location || '兰溪',
+        salary: '面议', // 数据库中暂无薪资字段，显示面议
+        tags: Array.isArray(job.skills_required) ? job.skills_required : 
+              (job.skills_required ? JSON.parse(job.skills_required) : []),
+        recruits: job.recruits_count || '若干',
+        benefits: Array.isArray(job.benefits) ? job.benefits : 
+                 (job.benefits ? JSON.parse(job.benefits) : []),
+        contactPhone: job.contact_phone,
+        description: job.description || '',
+        requirements: job.requirements ? job.requirements.split('\n').filter(Boolean) : [],
+        createdAt: job.created_at
+      }));
+    }
+  } catch (error) {
+    console.error('加载招聘数据失败:', error);
+    // 如果加载失败，保持空数组，让用户看到空状态
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 下拉刷新
+const onRefresh = async () => {
+  refreshing.value = true;
+  await loadJobs();
+  refreshing.value = false;
+};
+
+onMounted(() => {
+  loadJobs();
+});
 </script>
 
 <style scoped>
@@ -69,5 +74,19 @@ const jobs = ref([
   padding: 20px 15px;
   /* Ensure it fills the height below the tabs */
   min-height: calc(100vh - 44px); /* 44px is the default Vant tab height */
+}
+
+.loading-container,
+.empty-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.loading-text,
+.empty-text {
+  color: var(--text-secondary);
+  font-size: 1em;
 }
 </style> 

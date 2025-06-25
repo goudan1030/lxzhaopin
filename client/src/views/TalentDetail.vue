@@ -1,28 +1,39 @@
 <template>
   <div class="talent-detail-page">
     <!-- Detail Page Content Area -->
-    <main class="detail-content">
-      <!-- The header card inside the detail content -->
-      <div class="detail-card-header">
-        <div class="title">{{ talent.name }}</div>
-        <div class="salary">{{ talent.role }}</div>
-        <div class="meta">{{ talent.meta }}</div>
-        <div class="tags">
-          <span v-for="skill in talent.skills" :key="skill" class="tag">{{ skill }}</span>
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+      <main class="detail-content">
+        <!-- 加载状态 -->
+        <div v-if="loading" class="loading-container">
+          <div class="loading-text">加载中...</div>
         </div>
-      </div>
+        
+        <!-- 内容区域 -->
+        <div v-else>
+          <!-- The header card inside the detail content -->
+          <div class="detail-card-header">
+            <div class="title">{{ talent.name || '求职者' }}</div>
+            <div class="salary">{{ talent.role || '求职中' }}</div>
+            <div class="meta">{{ talent.meta }}</div>
+            <div class="tags" v-if="talent.skills && talent.skills.length > 0">
+              <span v-for="skill in talent.skills" :key="skill" class="tag">{{ skill }}</span>
+            </div>
+          </div>
 
-      <!-- Content Sections -->
-      <div class="detail-section">
-        <h2>工作经历</h2>
-        <div v-html="talent.experience"></div>
-      </div>
+          <!-- Content Sections -->
+          <div class="detail-section">
+            <h2>工作经历</h2>
+            <div v-if="talent.experience" v-html="talent.experience"></div>
+            <p v-else>暂无工作经历</p>
+          </div>
 
-      <div class="detail-section">
-        <h2>教育背景</h2>
-        <p>{{ talent.education }}</p>
-      </div>
-    </main>
+          <div class="detail-section">
+            <h2>教育背景</h2>
+            <p>{{ talent.education || '暂无教育背景' }}</p>
+          </div>
+        </div>
+      </main>
+    </van-pull-refresh>
 
     <!-- Sticky Footer with Actions -->
     <footer class="detail-footer">
@@ -62,9 +73,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '../composables/useAuth';
+import { PullRefresh } from 'vant';
+import apiService from '../services/apiService';
 
 const route = useRoute();
 const router = useRouter();
@@ -74,18 +87,75 @@ const { requireAuth } = useAuth();
 const showContactModal = ref(false);
 // 收藏弹窗控制
 const showCollectModal = ref(false);
+// 加载状态
+const loading = ref(true);
+const refreshing = ref(false);
 
-// 示例数据，实际应该从props或API获取
+// 简历信息数据
 const talent = ref({
-  name: '张三',
-  role: '求职：全栈工程师',
-  meta: '5年经验 · 本科',
-  age: 28,
-  contactPhone: '18611112222',
-  skills: ['Vue.js', 'Django', 'MySQL', 'AWS'],
-  experience: '<h4>项目A (2020-至今)</h4><p>担任后端开发，使用Django和MySQL构建了一个电商后台管理系统，负责用户模块、订单模块的设计与开发。在项目中，我主导了数据库架构设计，优化了查询性能，使系统响应时间提升了40%。</p><h4>项目B (2018-2020)</h4><p>作为前端开发，参与了公司内部CRM系统的开发，使用Vue.js构建了用户界面，实现了复杂的数据可视化功能。</p>',
-  education: '毕业于XX大学计算机科学与技术专业，学士学位。在校期间多次获得奖学金，参与了多个实习项目。'
+  name: '',
+  role: '',
+  meta: '',
+  age: null,
+  contactPhone: '',
+  skills: [],
+  experience: '',
+  education: ''
 });
+
+// 加载简历详情
+const loadTalentDetail = async () => {
+  try {
+    loading.value = true;
+    const talentId = route.params.id;
+    
+    // 从列表数据中获取详情
+    const response = await apiService.posts.getPublicTalents();
+    
+    if (response.success && response.data) {
+      // 根据索引或ID查找对应的简历信息
+      let talentData;
+      if (isNaN(talentId)) {
+        // 如果是UUID，按ID查找
+        talentData = response.data.find(item => item.id === talentId);
+      } else {
+        // 如果是索引，按索引获取
+        talentData = response.data[parseInt(talentId)];
+      }
+      
+      if (talentData) {
+        // 转换数据格式
+        talent.value = {
+          name: talentData.name,
+          role: `求职：${talentData.desired_position || '不限'}`,
+          meta: `${talentData.age ? talentData.age + '岁' : ''} ${talentData.age ? '·' : ''}`,
+          age: talentData.age,
+          contactPhone: talentData.contact_phone,
+          skills: Array.isArray(talentData.skills) ? talentData.skills : 
+                  (talentData.skills ? JSON.parse(talentData.skills) : []),
+          experience: talentData.work_experience || '暂无工作经历',
+          education: talentData.education_background || '暂无教育背景',
+          selfIntroduction: talentData.self_introduction || ''
+        };
+      } else {
+        console.error('简历信息不存在');
+        router.back();
+      }
+    }
+  } catch (error) {
+    console.error('加载简历详情失败:', error);
+    router.back();
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 下拉刷新
+const onRefresh = async () => {
+  refreshing.value = true;
+  await loadTalentDetail();
+  refreshing.value = false;
+};
 
 const goBack = () => {
   router.back();
@@ -112,6 +182,10 @@ const closeContactModal = () => {
 const closeCollectModal = () => {
   showCollectModal.value = false;
 };
+
+onMounted(() => {
+  loadTalentDetail();
+});
 </script>
 
 <style scoped>
@@ -129,6 +203,19 @@ const closeCollectModal = () => {
   padding: 20px 15px;
   background-color: var(--background-color);
   padding-bottom: 100px; /* 为底部按钮留出空间 */
+}
+
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.loading-text {
+  color: var(--text-secondary);
+  font-size: 1em;
 }
 
 /* The header card inside the detail content */

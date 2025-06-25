@@ -1,38 +1,48 @@
 <template>
   <div class="job-detail-page">
     <!-- Detail Page Content Area -->
-    <main class="detail-content">
-      <!-- The header card inside the detail content -->
-      <div class="detail-card-header">
-        <div class="title">{{ job.title }}</div>
-        <div class="salary">{{ job.salary }}</div>
-        <div class="meta">{{ job.company }} · {{ job.location }} · 招聘{{ job.recruits || '若干' }}</div>
-        <div class="tags">
-          <span v-for="tag in job.tags" :key="tag" class="tag">{{ tag }}</span>
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+      <main class="detail-content">
+        <!-- 加载状态 -->
+        <div v-if="loading" class="loading-container">
+          <div class="loading-text">加载中...</div>
         </div>
-      </div>
+        
+        <!-- 内容区域 -->
+        <div v-else>
+          <!-- The header card inside the detail content -->
+          <div class="detail-card-header">
+            <div class="title">{{ job.title || '招聘信息' }}</div>
+            <div class="salary">{{ job.salary || '面议' }}</div>
+            <div class="meta">{{ job.company }} · {{ job.location }} · 招聘{{ job.recruits || '若干' }}</div>
+            <div class="tags" v-if="job.tags && job.tags.length > 0">
+              <span v-for="tag in job.tags" :key="tag" class="tag">{{ tag }}</span>
+            </div>
+          </div>
 
-      <!-- Content Sections -->
-      <div class="detail-section">
-        <h2>职位描述</h2>
-        <p>{{ job.description }}</p>
-      </div>
+          <!-- Content Sections -->
+          <div class="detail-section">
+            <h2>职位描述</h2>
+            <p>{{ job.description || '暂无描述' }}</p>
+          </div>
 
-      <div class="detail-section">
-        <h2>任职要求</h2>
-        <ul>
-          <li v-for="requirement in job.requirements" :key="requirement">{{ requirement }}</li>
-        </ul>
-      </div>
+          <div class="detail-section" v-if="job.requirements && job.requirements.length > 0">
+            <h2>任职要求</h2>
+            <ul>
+              <li v-for="requirement in job.requirements" :key="requirement">{{ requirement }}</li>
+            </ul>
+          </div>
 
-      <!-- Benefits Section -->
-      <div v-if="job.benefits && job.benefits.length > 0" class="detail-section">
-        <h2>福利待遇</h2>
-        <div class="card-benefits tags">
-          <span v-for="benefit in job.benefits" :key="benefit" class="tag">{{ benefit }}</span>
+          <!-- Benefits Section -->
+          <div v-if="job.benefits && job.benefits.length > 0" class="detail-section">
+            <h2>福利待遇</h2>
+            <div class="card-benefits tags">
+              <span v-for="benefit in job.benefits" :key="benefit" class="tag">{{ benefit }}</span>
+            </div>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </van-pull-refresh>
 
     <!-- Sticky Footer with Actions -->
     <footer class="detail-footer">
@@ -75,6 +85,8 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '../composables/useAuth';
+import { PullRefresh } from 'vant';
+import apiService from '../services/apiService';
 
 const route = useRoute();
 const router = useRouter();
@@ -84,25 +96,79 @@ const { requireAuth } = useAuth();
 const showContactModal = ref(false);
 // 收藏弹窗控制
 const showCollectModal = ref(false);
+// 加载状态
+const loading = ref(true);
+const refreshing = ref(false);
 
-// 示例数据，实际应该从props或API获取
+// 招聘信息数据
 const job = ref({
-  title: '高级前端开发工程师',
-  company: '技术有限公司',
-  location: '上海',
-  salary: '25-45K·14薪',
-  tags: ['React', 'TypeScript', 'Node.js', '5-10年'],
-  benefits: ['五险一金', '年底双薪', '带薪年假', '定期体检'],
-  recruits: '5人',
-  contactPhone: '13812345678',
-  description: '负责核心产品的Web前端架构设计和开发，推动团队技术成长。参与产品需求分析，完成前端开发工作，确保用户体验的优化。',
-  requirements: [
-    '计算机相关专业本科及以上学历',
-    '五年以上前端开发经验',
-    '精通React、Vue等至少一种主流框架',
-    '熟悉Node.js，有全栈开发经验者优先'
-  ]
+  title: '',
+  company: '',
+  location: '',
+  salary: '',
+  tags: [],
+  benefits: [],
+  recruits: '',
+  contactPhone: '',
+  description: '',
+  requirements: []
 });
+
+// 加载招聘详情
+const loadJobDetail = async () => {
+  try {
+    loading.value = true;
+    const jobId = route.params.id;
+    
+    // 先从列表数据中获取详情，如果未来有单独的详情接口可以改为调用详情接口
+    const response = await apiService.posts.getPublicJobs();
+    
+    if (response.success && response.data) {
+      // 根据索引或ID查找对应的招聘信息
+      let jobData;
+      if (isNaN(jobId)) {
+        // 如果是UUID，按ID查找
+        jobData = response.data.find(item => item.id === jobId);
+      } else {
+        // 如果是索引，按索引获取
+        jobData = response.data[parseInt(jobId)];
+      }
+      
+      if (jobData) {
+        // 转换数据格式
+        job.value = {
+          title: jobData.title,
+          company: jobData.publisher_name || '未知公司',
+          location: jobData.location || '兰溪',
+          salary: '面议', // 数据库中暂无薪资字段
+          tags: Array.isArray(jobData.skills_required) ? jobData.skills_required : 
+                (jobData.skills_required ? JSON.parse(jobData.skills_required) : []),
+          benefits: Array.isArray(jobData.benefits) ? jobData.benefits : 
+                   (jobData.benefits ? JSON.parse(jobData.benefits) : []),
+          recruits: jobData.recruits_count || '若干',
+          contactPhone: jobData.contact_phone,
+          description: jobData.description || '暂无描述',
+          requirements: jobData.requirements ? jobData.requirements.split('\n').filter(Boolean) : []
+        };
+      } else {
+        console.error('招聘信息不存在');
+        router.back();
+      }
+    }
+  } catch (error) {
+    console.error('加载招聘详情失败:', error);
+    router.back();
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 下拉刷新
+const onRefresh = async () => {
+  refreshing.value = true;
+  await loadJobDetail();
+  refreshing.value = false;
+};
 
 const goBack = () => {
   router.back();
@@ -129,6 +195,10 @@ const closeContactModal = () => {
 const closeCollectModal = () => {
   showCollectModal.value = false;
 };
+
+onMounted(() => {
+  loadJobDetail();
+});
 </script>
 
 <style scoped>
@@ -146,6 +216,19 @@ const closeCollectModal = () => {
   padding: 20px 15px;
   background-color: var(--background-color);
   padding-bottom: 100px; /* 为底部按钮留出空间 */
+}
+
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.loading-text {
+  color: var(--text-secondary);
+  font-size: 1em;
 }
 
 /* The header card inside the detail content */

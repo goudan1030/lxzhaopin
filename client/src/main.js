@@ -2,10 +2,10 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
-import { useAuth } from './composables/useAuth'
+
 
 // Vant 组件
-import { Tabbar, TabbarItem, Tab, Tabs, NavBar, Button, Field, CellGroup, Cell, Form, Dialog, Toast, Notify, Icon, ActionSheet } from 'vant'
+import { Tabbar, TabbarItem, Tab, Tabs, NavBar, Button, Field, CellGroup, Cell, Form, Dialog, Toast, Notify, Icon, ActionSheet, PullRefresh } from 'vant'
 import 'vant/lib/index.css'
 
 import './style.css'
@@ -32,15 +32,7 @@ app.use(Toast)
 app.use(Notify)
 app.use(Icon)
 app.use(ActionSheet)
+app.use(PullRefresh)
 
-// 初始化认证状态
-const { initAuth } = useAuth()
-
-// 在应用挂载前初始化认证
-initAuth().then(() => {
-  console.log('认证状态初始化完成')
-  app.mount('#app')
-}).catch((error) => {
-  console.error('认证初始化失败:', error)
-  app.mount('#app') // 即使初始化失败也要挂载应用
-})
+// 直接挂载应用，认证初始化在App.vue中处理
+app.mount('#app')

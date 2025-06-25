@@ -1,43 +1,83 @@
 <template>
   <div class="plaza-list-container">
-    <div class="plaza-card" v-for="(post, index) in plazaPosts" :key="index">
-      <div class="name">{{ post.name }}</div>
-      <div class="text">{{ post.text }}</div>
-      <div class="tags">
-        <span v-for="tag in post.tags" :key="tag" class="tag">{{ tag }}</span>
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+      <!-- 分类过滤器 -->
+      <div class="category-filter">
+        <div 
+          class="filter-option" 
+          :class="{ active: currentCategory === null }"
+          @click="filterByCategory(null)"
+        >
+          全部
+        </div>
+        <div 
+          class="filter-option" 
+          :class="{ active: currentCategory === 'finding_job' }"
+          @click="filterByCategory('finding_job')"
+        >
+          🔍 找活
+        </div>
+        <div 
+          class="filter-option" 
+          :class="{ active: currentCategory === 'recruiting' }"
+          @click="filterByCategory('recruiting')"
+        >
+          💼 招人
+        </div>
       </div>
-      <div class="actions">
-        <button class="action-btn" :class="{ liked: post.isLiked }" @click="toggleLike(index)">
-          <span class="icon">👍</span>
-          <span>{{ post.likes }}</span>
-        </button>
-        <button class="action-btn" @click="toggleComments(index)">
-          <span class="icon">💬</span>
-          <span>{{ post.comments }}</span>
-        </button>
-        <button class="action-btn" @click="showContact(post)">
-          <span class="icon">📞</span>
-          <span>联系</span>
-        </button>
+
+      <div v-if="loading && !refreshing" class="loading-container">
+        <div class="loading-text">加载中...</div>
       </div>
-      <div v-if="post.showComments" class="comment-container">
-        <div class="comment-list-inline">
-          <div v-for="comment in getCommentsToShow(post)" :key="comment.id" class="comment-item-inline">
-            <span class="comment-user-inline">{{ comment.user }}:</span>
-            <span class="comment-text-inline">{{ comment.text }}</span>
+      <div v-else-if="plazaPosts.length === 0" class="empty-container">
+        <div class="empty-text">暂无{{ currentCategory ? (currentCategory === 'recruiting' ? '招人' : '找活') : '' }}信息</div>
+      </div>
+      <div v-else>
+        <div class="plaza-card" v-for="(post, index) in plazaPosts" :key="index">
+          <div class="card-header">
+            <div class="name">{{ post.name }}</div>
+            <div class="category-badge" :class="post.category">
+              {{ post.categoryText }}
+            </div>
+          </div>
+          <div class="text">{{ post.text }}</div>
+          <div class="tags">
+            <span v-for="tag in post.tags" :key="tag" class="tag">{{ tag }}</span>
+          </div>
+          <div class="actions">
+            <button class="action-btn" :class="{ liked: post.isLiked }" @click="toggleLike(index)">
+              <span class="icon">👍</span>
+              <span>{{ post.likes }}</span>
+            </button>
+            <button class="action-btn" @click="toggleComments(index)">
+              <span class="icon">💬</span>
+              <span>{{ post.comments }}</span>
+            </button>
+            <button class="action-btn" @click="showContact(post)">
+              <span class="icon">📞</span>
+              <span>联系</span>
+            </button>
+          </div>
+          <div v-if="post.showComments" class="comment-container">
+            <div class="comment-list-inline">
+              <div v-for="comment in getCommentsToShow(post)" :key="comment.id" class="comment-item-inline">
+                <span class="comment-user-inline">{{ comment.user }}:</span>
+                <span class="comment-text-inline">{{ comment.text }}</span>
+              </div>
+            </div>
+            <button v-if="!post.showAllComments && post.comments_list.length > 3" 
+                    @click="post.showAllComments = true" 
+                    class="view-more-comments">
+              查看全部 {{ post.comments_list.length }} 条评论
+            </button>
+            <div class="comment-form-inline">
+              <input v-model="post.newComment" type="text" class="comment-inline-input" placeholder="添加评论...">
+              <button @click="addComment(index)" class="btn-post-inline-comment">发布</button>
+            </div>
           </div>
         </div>
-        <button v-if="!post.showAllComments && post.comments_list.length > 3" 
-                @click="post.showAllComments = true" 
-                class="view-more-comments">
-          查看全部 {{ post.comments_list.length }} 条评论
-        </button>
-        <div class="comment-form-inline">
-          <input v-model="post.newComment" type="text" class="comment-inline-input" placeholder="添加评论...">
-          <button @click="addComment(index)" class="btn-post-inline-comment">发布</button>
-        </div>
       </div>
-    </div>
+    </van-pull-refresh>
 
     <!-- 联系方式弹窗 -->
     <div v-if="showContactModal" class="modal-overlay" @click="closeContactModal">
@@ -55,8 +95,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useAuth } from '../composables/useAuth';
+import apiService from '../services/apiService';
 
 const { requireAuth } = useAuth();
 
@@ -64,64 +105,93 @@ const { requireAuth } = useAuth();
 const showContactModal = ref(false);
 const currentContactPhone = ref('');
 
-const plazaPosts = ref([
-  {
-    name: '王师傅',
-    text: '本人是持证电工，有10年经验，家装、工厂用电都精通，想找个稳定或临时的电工活。',
-    tags: ['电工', '10年经验'],
-    likes: 12,
-    comments: 4,
-    contactPhone: '13811112222',
-    isLiked: false,
-    showComments: false,
-    showAllComments: false,
-    newComment: '',
-    comments_list: [
-      { id: 1, user: '我', text: '太棒了！' },
-      { id: 2, user: '王师傅', text: '楼上的，已经私信你了' },
-      { id: 3, user: '包工头老刘', text: '留个联系方式' },
-      { id: 4, user: '热心市民张', text: '师傅手艺怎么样？' },
-    ]
-  },
-  {
-    name: '李阿姨',
-    text: '想找一份在县城东区的保姆或钟点工工作，会做饭，爱干净，有耐心。',
-    tags: ['保姆', '钟点工'],
-    likes: 25,
-    comments: 1,
-    contactPhone: '13933334444',
-    isLiked: false,
-    showComments: false,
-    showAllComments: false,
-    newComment: '',
-    comments_list: [
-      { id: 1, user: '宝妈小丽', text: '阿姨你好，怎么联系你？' }
-    ]
-  },
-  {
-    name: '小张',
-    text: '刚毕业的大学生，会用Office、PS，想找个文员、助理类的工作，学习能力强，能吃苦。',
-    tags: ['文员', '应届生'],
-    likes: 8,
-    comments: 0,
-    contactPhone: '13655556666',
-    isLiked: false,
-    showComments: false,
-    showAllComments: false,
-    newComment: '',
-    comments_list: []
-  }
-]);
+const plazaPosts = ref([]);
+const loading = ref(true);
+const refreshing = ref(false);
+const currentCategory = ref(null); // null表示全部，'finding_job'表示找活，'recruiting'表示招人
 
-const toggleLike = (index) => {
+// 加载找活数据
+const loadPlazaPosts = async (category = null) => {
+  try {
+    loading.value = true;
+    const response = await apiService.posts.getPublicPlaza(1, 20, category);
+    if (response.success) {
+      // 转换数据格式以匹配组件期望的格式
+      plazaPosts.value = await Promise.all(response.data.map(async (post) => {
+        // 检查用户是否点赞过这条信息
+        let isLiked = false;
+        try {
+          const token = localStorage.getItem('auth_token');
+          if (token) {
+            const likeResponse = await apiService.posts.getPlazaLikeStatus(post.id);
+            isLiked = likeResponse.success ? likeResponse.data.isLiked : false;
+          }
+        } catch (error) {
+          console.error('获取点赞状态失败:', error);
+        }
+
+        // 获取评论列表
+        let comments_list = [];
+        try {
+          const commentsResponse = await apiService.posts.getPlazaComments(post.id);
+          if (commentsResponse.success) {
+            comments_list = commentsResponse.data.map(comment => ({
+              id: comment.id,
+              user: comment.user_name || '匿名用户',
+              text: comment.content,
+              created_at: comment.created_at
+            }));
+          }
+        } catch (error) {
+          console.error('获取评论失败:', error);
+        }
+
+        return {
+          id: post.id, // 保存数据库ID
+          name: post.user_name || '匿名用户',
+          text: post.content,
+          tags: Array.isArray(post.tags) ? post.tags : 
+                (post.tags ? JSON.parse(post.tags) : []),
+          category: post.category || 'finding_job',
+          categoryText: post.category === 'recruiting' ? '招人' : '找活',
+          likes: post.likes_count || 0,
+          comments: post.comments_count || 0,
+          contactPhone: post.contact_phone,
+          isLiked: isLiked,
+          showComments: false,
+          showAllComments: false,
+          newComment: '',
+          comments_list: comments_list,
+          createdAt: post.created_at
+        };
+      }));
+    }
+  } catch (error) {
+    console.error('加载找活数据失败:', error);
+    // 如果加载失败，保持空数组
+  } finally {
+    loading.value = false;
+  }
+};
+
+const toggleLike = async (index) => {
   if (!requireAuth()) return;
   const post = plazaPosts.value[index];
-  if (post.isLiked) {
-    post.likes--;
-    post.isLiked = false;
-  } else {
-    post.likes++;
-    post.isLiked = true;
+  
+  try {
+    const response = await apiService.posts.togglePlazaLike(post.id);
+    if (response.success) {
+      // 更新本地状态
+      post.isLiked = response.data.isLiked;
+      if (response.data.isLiked) {
+        post.likes++;
+      } else {
+        post.likes = Math.max(0, post.likes - 1);
+      }
+    }
+  } catch (error) {
+    console.error('点赞操作失败:', error);
+    // 可以显示错误提示
   }
 };
 
@@ -150,22 +220,49 @@ const getCommentsToShow = (post) => {
   return post.showAllComments ? post.comments_list : post.comments_list.slice(0, 3);
 };
 
-const addComment = (index) => {
+const addComment = async (index) => {
   if (!requireAuth()) return;
   const post = plazaPosts.value[index];
   if (post.newComment.trim() === '') return;
   
-  const newComment = {
-    id: Date.now(),
-    user: '我',
-    text: post.newComment.trim()
-  };
-  
-  post.comments_list.unshift(newComment);
-  post.comments = post.comments_list.length;
-  post.newComment = '';
-  post.showAllComments = true;
+  try {
+    const response = await apiService.posts.addPlazaComment(post.id, post.newComment.trim());
+    if (response.success) {
+      // 添加新评论到列表
+      const newComment = {
+        id: response.data.id,
+        user: response.data.user_name || '我',
+        text: response.data.content,
+        created_at: response.data.created_at
+      };
+      
+      post.comments_list.unshift(newComment);
+      post.comments = post.comments_list.length;
+      post.newComment = '';
+      post.showAllComments = true;
+    }
+  } catch (error) {
+    console.error('添加评论失败:', error);
+    // 可以显示错误提示
+  }
 };
+
+// 分类过滤
+const filterByCategory = async (category) => {
+  currentCategory.value = category;
+  await loadPlazaPosts(category);
+};
+
+// 下拉刷新
+const onRefresh = async () => {
+  refreshing.value = true;
+  await loadPlazaPosts(currentCategory.value);
+  refreshing.value = false;
+};
+
+onMounted(() => {
+  loadPlazaPosts();
+});
 </script>
 
 <style scoped>
@@ -173,6 +270,37 @@ const addComment = (index) => {
   background-color: var(--background-color);
   padding: 20px 15px;
   min-height: calc(100vh - 44px);
+}
+
+.category-filter {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 0 4px;
+}
+
+.filter-option {
+  flex: 1;
+  padding: 10px 16px;
+  text-align: center;
+  border-radius: 20px;
+  background-color: var(--card-background);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-option:active {
+  transform: scale(0.98);
+}
+
+.filter-option.active {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
 }
 
 /* Plaza Card Specifics - 严格按照HTML文档样式 */
@@ -191,10 +319,35 @@ const addComment = (index) => {
   box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
 .plaza-card .name {
   font-weight: 600;
   font-size: 1.1em;
-  margin-bottom: 8px;
+  flex: 1;
+}
+
+.category-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: white;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.category-badge.finding_job {
+  background-color: #10B981; /* 绿色 - 找活 */
+}
+
+.category-badge.recruiting {
+  background-color: #3B82F6; /* 蓝色 - 招人 */
 }
 
 .plaza-card .text {
@@ -384,5 +537,19 @@ const addComment = (index) => {
 
 .modal-btn:active {
   transform: scale(0.97);
+}
+
+.loading-container,
+.empty-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.loading-text,
+.empty-text {
+  color: var(--text-secondary);
+  font-size: 1em;
 }
 </style> 

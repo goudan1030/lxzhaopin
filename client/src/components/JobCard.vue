@@ -31,7 +31,9 @@ const props = defineProps({
 });
 
 const goToDetail = () => {
-  router.push(`/job/${props.index}`);
+  // 优先使用job的ID，如果没有则使用索引
+  const identifier = props.job.id || props.index;
+  router.push(`/job/${identifier}`);
 };
 </script>
 
