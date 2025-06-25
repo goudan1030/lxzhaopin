@@ -62,22 +62,27 @@ app.use((error, req, res, next) => {
   });
 });
 
-// 启动服务器
-async function startServer() {
-  try {
-    // 测试数据库连接
-    await testConnection();
-    
-    app.listen(PORT, () => {
-      console.log(`🚀 服务器启动成功！`);
-      console.log(`📱 API地址: http://localhost:${PORT}/api`);
-      console.log(`🔍 健康检查: http://localhost:${PORT}/api/health`);
-      console.log(`🌍 环境: ${process.env.NODE_ENV || 'development'}`);
-    });
-  } catch (error) {
-    console.error('❌ 服务器启动失败:', error);
-    process.exit(1);
+// 对于Vercel，导出app而不是启动服务器
+if (process.env.VERCEL) {
+  module.exports = app;
+} else {
+  // 本地开发时启动服务器
+  async function startServer() {
+    try {
+      // 测试数据库连接
+      await testConnection();
+      
+      app.listen(PORT, () => {
+        console.log(`🚀 服务器启动成功！`);
+        console.log(`📱 API地址: http://localhost:${PORT}/api`);
+        console.log(`🔍 健康检查: http://localhost:${PORT}/api/health`);
+        console.log(`🌍 环境: ${process.env.NODE_ENV || 'development'}`);
+      });
+    } catch (error) {
+      console.error('❌ 服务器启动失败:', error);
+      process.exit(1);
+    }
   }
-}
 
-startServer(); 
+  startServer();
+} 

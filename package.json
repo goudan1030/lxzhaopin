@@ -1,0 +1,17 @@
+{
+  "name": "lxzhaopin",
+  "version": "1.0.0",
+  "description": "兰溪招聘 - 全栈招聘应用",
+  "scripts": {
+    "build": "cd client && npm install && npm run build",
+    "start": "cd server && npm start",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "install:all": "cd client && npm install && cd ../server && npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "lxzhaopin",
+  "license": "MIT"
+} 
