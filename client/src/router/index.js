@@ -65,10 +65,16 @@ router.beforeEach(async (to, from, next) => {
   const publicRoutes = ['/login', '/complete-profile', '/agreement', '/privacy', '/demo']
   const isPublicRoute = publicRoutes.includes(to.path)
   
-  // 如果是公共路由或者没有token，直接通过
-  if (!token || isPublicRoute) {
-    console.log('公共路由或无token，直接通过')
+  // 如果是公共路由，直接通过
+  if (isPublicRoute) {
+    console.log('公共路由，直接通过')
     return next()
+  }
+  
+  // 如果没有token，跳转到登录页
+  if (!token) {
+    console.log('无token，跳转到登录页')
+    return next('/login')
   }
   
   // 如果从登录页面跳转，让Login.vue处理逻辑，避免冲突

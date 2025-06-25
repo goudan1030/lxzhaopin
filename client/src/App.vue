@@ -3,6 +3,20 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
+import { useAuth } from './composables/useAuth'
+
+// 初始化认证状态
+const { initAuth } = useAuth()
+
+onMounted(async () => {
+  try {
+    await initAuth()
+    console.log('认证状态初始化完成')
+  } catch (error) {
+    console.error('认证初始化失败:', error)
+  }
+})
 </script>
 
 <style>
