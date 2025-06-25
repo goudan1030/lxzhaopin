@@ -353,7 +353,7 @@ router.post('/complete-profile', authenticateToken, [
       updateValues.push(avatar_url);
     }
 
-    updateValues.push(req.user.userId);
+    updateValues.push(req.user.id);
 
     await pool.execute(
       `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
@@ -363,7 +363,7 @@ router.post('/complete-profile', authenticateToken, [
     // 获取更新后的用户信息
     const [users] = await pool.execute(
       'SELECT id, phone, email, name, nickname, avatar_url, role, status, profile_completed FROM users WHERE id = ?',
-      [req.user.userId]
+      [req.user.id]
     );
 
     const user = users[0];

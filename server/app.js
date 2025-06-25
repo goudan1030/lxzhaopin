@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const { testConnection } = require('./config/database');
 const authRoutes = require('./routes/auth');
+const postsRoutes = require('./routes/posts');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,6 +36,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // API路由
 app.use('/api/auth', authRoutes);
+app.use('/api/posts', postsRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

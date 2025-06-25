@@ -55,12 +55,42 @@
         <div v-if="currentPostType === 'plaza'" class="form-content">
           <h2 class="form-title">发布找活信息</h2>
           <div class="form-group">
+            <label>发布类型</label>
+            <div class="category-selection">
+              <div 
+                class="category-option" 
+                :class="{ active: plazaForm.category === 'finding_job' }"
+                @click="plazaForm.category = 'finding_job'"
+              >
+                <span class="category-icon">👨‍💼</span>
+                <span class="category-text">我要找活</span>
+              </div>
+              <div 
+                class="category-option"
+                :class="{ active: plazaForm.category === 'recruiting' }"
+                @click="plazaForm.category = 'recruiting'"
+              >
+                <span class="category-icon">💼</span>
+                <span class="category-text">我要招人</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
             <label>详细说明</label>
-            <textarea v-model="plazaForm.text" placeholder="介绍下你的技能、经验和想找什么样的活..." class="form-textarea"></textarea>
+            <textarea 
+              v-model="plazaForm.text" 
+              :placeholder="plazaForm.category === 'recruiting' ? '介绍你的招聘需求、工作内容和要求...' : '介绍下你的技能、经验和想找什么样的活...'" 
+              class="form-textarea"
+            ></textarea>
           </div>
           <div class="form-group">
             <label>标签 (逗号分隔)</label>
-            <input type="text" v-model="plazaForm.tags" placeholder="如：电工,10年经验" class="form-input">
+            <input 
+              type="text" 
+              v-model="plazaForm.tags" 
+              :placeholder="plazaForm.category === 'recruiting' ? '如：销售,有经验优先' : '如：电工,10年经验'" 
+              class="form-input"
+            >
           </div>
           <div class="form-group">
             <label>联系电话</label>
@@ -118,16 +148,19 @@
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '../composables/useAuth';
+import { useLocalStorage } from '../composables/useLocalStorage';
+import { Toast } from 'vant';
+import apiService from '../services/apiService';
 
 const router = useRouter();
 const route = useRoute();
-const { requireAuth } = useAuth();
+const { createPersistentForm } = useLocalStorage();
 
 const showTypeModal = ref(false);
 const currentPostType = ref('');
 
-// Form data
-const jobForm = ref({
+// 持久化表单数据 - 自动保存和恢复
+const { formData: jobForm, clearForm: clearJobForm } = createPersistentForm('job_form', {
   title: '',
   company: '',
   salary: '',
@@ -138,14 +171,15 @@ const jobForm = ref({
   description: ''
 });
 
-const plazaForm = ref({
+const { formData: plazaForm, clearForm: clearPlazaForm } = createPersistentForm('plaza_form', {
+  category: 'finding_job',
   text: '',
   tags: '',
   phone: ''
 });
 
-const talentForm = ref({
-  name: '我',
+const { formData: talentForm, clearForm: clearTalentForm } = createPersistentForm('talent_form', {
+  name: '',
   phone: '',
   age: '',
   role: '',
@@ -155,9 +189,14 @@ const talentForm = ref({
   education: ''
 });
 
-const selectPostType = (type) => {
+const selectPostType = async (type) => {
   currentPostType.value = type;
   showTypeModal.value = false;
+  
+  // 如果选择的是简历类型，加载已有的简历数据
+  if (type === 'talent') {
+    await loadTalentData();
+  }
 };
 
 const cancelPost = () => {
@@ -171,54 +210,135 @@ const cancelPost = () => {
   }
 };
 
-const submitJobPost = () => {
+const submitJobPost = async () => {
+  // 基础验证
+  if (!jobForm.value.title.trim()) {
+    Toast.fail({ message: '⚠️ 请输入职位名称', duration: 2000 });
+    return;
+  }
+  if (!jobForm.value.company.trim()) {
+    Toast.fail({ message: '⚠️ 请输入公司名称', duration: 2000 });
+    return;
+  }
+  if (!jobForm.value.salary.trim()) {
+    Toast.fail({ message: '⚠️ 请输入薪资范围', duration: 2000 });
+    return;
+  }
   if (!jobForm.value.phone || jobForm.value.phone.length !== 11) {
-    alert('请输入有效的11位手机号码。');
+    Toast.fail({ message: '⚠️ 请输入有效的11位手机号码', duration: 2000 });
     return;
   }
-  
-  // 模拟提交成功
-  alert('招聘信息发布成功！');
-  // 返回到来源Tab
-  const fromTab = route.query.fromTab;
-  if (fromTab !== undefined) {
-    router.push({ path: '/', query: { tab: fromTab } });
-  } else {
-    router.push('/');
+  if (!jobForm.value.description.trim()) {
+    Toast.fail({ message: '⚠️ 请输入职位描述', duration: 2000 });
+    return;
+  }
+
+  try {
+    Toast.loading({ message: '发布中...', forbidClick: true });
+    
+    const response = await apiService.posts.createJob(jobForm.value);
+    
+    if (response.success) {
+      Toast.success({ message: '🎉 招聘信息发布成功！', duration: 2000 });
+      
+      // 清除表单数据
+      clearJobForm();
+      
+      // 返回到来源Tab
+      setTimeout(() => {
+        const fromTab = route.query.fromTab;
+        if (fromTab !== undefined) {
+          router.push({ path: '/', query: { tab: fromTab } });
+        } else {
+          router.push('/');
+        }
+      }, 1500);
+    }
+  } catch (error) {
+    Toast.fail({ message: `❌ ${error.message || '发布失败'}`, duration: 3000 });
   }
 };
 
-const submitPlazaPost = () => {
+const submitPlazaPost = async () => {
+  // 基础验证
+  if (!plazaForm.value.category) {
+    Toast.fail({ message: '⚠️ 请选择发布类型', duration: 2000 });
+    return;
+  }
+  if (!plazaForm.value.text.trim()) {
+    Toast.fail({ message: '⚠️ 请输入详细说明', duration: 2000 });
+    return;
+  }
   if (!plazaForm.value.phone || plazaForm.value.phone.length !== 11) {
-    alert('请输入有效的11位手机号码。');
+    Toast.fail({ message: '⚠️ 请输入有效的11位手机号码', duration: 2000 });
     return;
   }
-  
-  // 模拟提交成功
-  alert('找活信息发布成功！');
-  // 返回到来源Tab
-  const fromTab = route.query.fromTab;
-  if (fromTab !== undefined) {
-    router.push({ path: '/', query: { tab: fromTab } });
-  } else {
-    router.push('/');
+
+  try {
+    Toast.loading({ message: '发布中...', forbidClick: true });
+    
+    const response = await apiService.posts.createPlaza(plazaForm.value);
+    
+    if (response.success) {
+      const categoryText = plazaForm.value.category === 'recruiting' ? '招聘' : '找活';
+      Toast.success({ message: `🎉 ${categoryText}信息发布成功！`, duration: 2000 });
+      
+      // 清除表单数据
+      clearPlazaForm();
+      
+      // 返回到来源Tab
+      setTimeout(() => {
+        const fromTab = route.query.fromTab;
+        if (fromTab !== undefined) {
+          router.push({ path: '/', query: { tab: fromTab } });
+        } else {
+          router.push('/');
+        }
+      }, 1500);
+    }
+  } catch (error) {
+    Toast.fail({ message: `❌ ${error.message || '发布失败'}`, duration: 3000 });
   }
 };
 
-const submitTalentProfile = () => {
-  if (!talentForm.value.phone || talentForm.value.phone.length !== 11) {
-    alert('请输入有效的11位手机号码。');
+const submitTalentProfile = async () => {
+  // 基础验证
+  if (!talentForm.value.name.trim()) {
+    Toast.fail({ message: '⚠️ 请输入姓名', duration: 2000 });
     return;
   }
-  
-  // 模拟提交成功
-  alert('简历保存成功！');
-  // 返回到来源Tab
-  const fromTab = route.query.fromTab;
-  if (fromTab !== undefined) {
-    router.push({ path: '/', query: { tab: fromTab } });
-  } else {
-    router.push('/');
+  if (!talentForm.value.phone || talentForm.value.phone.length !== 11) {
+    Toast.fail({ message: '⚠️ 请输入有效的11位手机号码', duration: 2000 });
+    return;
+  }
+  if (!talentForm.value.role.trim()) {
+    Toast.fail({ message: '⚠️ 请输入期望职位', duration: 2000 });
+    return;
+  }
+
+  try {
+    Toast.loading({ message: '保存中...', forbidClick: true });
+    
+    const response = await apiService.posts.createOrUpdateTalent(talentForm.value);
+    
+    if (response.success) {
+      Toast.success({ message: '🎉 简历保存成功！', duration: 2000 });
+      
+      // 简历保存成功后不清除表单数据，保持当前编辑状态
+      // clearTalentForm(); // 注释掉清除操作
+      
+      // 返回到来源Tab
+      setTimeout(() => {
+        const fromTab = route.query.fromTab;
+        if (fromTab !== undefined) {
+          router.push({ path: '/', query: { tab: fromTab } });
+        } else {
+          router.push('/');
+        }
+      }, 1500);
+    }
+  } catch (error) {
+    Toast.fail({ message: `❌ ${error.message || '保存失败'}`, duration: 3000 });
   }
 };
 
@@ -237,14 +357,43 @@ const goBack = () => {
   }
 };
 
-onMounted(() => {
-  // 检查登录状态
-  if (!requireAuth()) return;
+// 加载简历数据
+const loadTalentData = async () => {
+  try {
+    const response = await apiService.posts.getMyPosts();
+    if (response.success && response.data.talents && response.data.talents.length > 0) {
+      const talent = response.data.talents[0]; // 获取最新的简历
+      
+      // 回显简历数据到表单
+      talentForm.value.name = talent.name || '';
+      talentForm.value.phone = talent.contact_phone || '';
+      talentForm.value.age = talent.age || '';
+      talentForm.value.role = talent.desired_position || '';
+      talentForm.value.meta = talent.self_introduction || '';
+      talentForm.value.skills = Array.isArray(talent.skills) ? talent.skills.join(', ') : (talent.skills || '');
+      talentForm.value.experience = talent.work_experience || '';
+      talentForm.value.education = talent.education_background || '';
+      
+      console.log('简历数据回显成功');
+    }
+  } catch (error) {
+    console.error('加载简历数据失败:', error);
+    // 如果加载失败，不影响用户操作，继续使用本地存储的数据
+  }
+};
+
+onMounted(async () => {
+  // 路由守卫已经处理了认证，这里直接处理页面逻辑
   
   // Check if coming from FAB click or direct access
   const postType = route.params.type;
   if (postType) {
     currentPostType.value = postType;
+    
+    // 如果是简历页面，加载已有的简历数据
+    if (postType === 'talent') {
+      await loadTalentData();
+    }
   } else {
     showTypeModal.value = true;
   }
@@ -317,6 +466,50 @@ onMounted(() => {
 .form-textarea {
   height: 120px;
   resize: vertical;
+}
+
+.category-selection {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.category-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: var(--background-color);
+}
+
+.category-option:active {
+  transform: scale(0.98);
+}
+
+.category-option.active {
+  border-color: var(--primary-color);
+  background-color: var(--primary-light);
+}
+
+.category-icon {
+  font-size: 1.8em;
+  margin-bottom: 8px;
+}
+
+.category-text {
+  font-size: 0.9em;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.category-option.active .category-text {
+  color: var(--primary-color);
+  font-weight: 600;
 }
 
 .btn-submit {

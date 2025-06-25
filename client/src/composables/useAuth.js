@@ -49,6 +49,8 @@ export function useAuth() {
 
       if (response.success) {
         user.value = response.data.user
+        console.log('useAuth: 登录成功，设置用户状态:', user.value)
+        console.log('useAuth: 登录状态检查:', isLoggedIn.value)
         return { success: true, data: response.data.user }
       }
 
@@ -142,7 +144,9 @@ export function useAuth() {
 
   // 检查登录状态并重定向
   const requireAuth = (redirectPath = '/login') => {
-    if (!isLoggedIn.value) {
+    // 优先检查token而不是user状态，避免异步初始化问题
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
       const currentPath = router.currentRoute.value.fullPath
       router.push({
         path: redirectPath,
