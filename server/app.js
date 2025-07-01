@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 const { testConnection } = require('./config/database');
@@ -12,11 +13,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 安全中间件
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // 为了支持内联样式和脚本，在生产环境中应该配置更严格的CSP
+}));
 
-// CORS配置
+// CORS配置 - 由于现在是同域，可以简化CORS配置
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.CORS_ORIGIN || true, // 同域请求
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -34,6 +37,10 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// 静态文件服务 - 提供前端构建后的文件
+const staticPath = path.join(__dirname, 'public');
+app.use(express.static(staticPath));
+
 // API路由
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postsRoutes);
@@ -47,9 +54,15 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// 404处理
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'API路径不存在' });
+// SPA支持 - 所有非API请求都返回index.html，让前端路由处理
+app.get('*', (req, res) => {
+  // 排除API路由
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API路径不存在' });
+  }
+  
+  // 返回前端应用
+  res.sendFile(path.join(staticPath, 'index.html'));
 });
 
 // 错误处理中间件
@@ -73,10 +86,12 @@ if (process.env.VERCEL) {
       await testConnection();
       
       app.listen(PORT, () => {
-        console.log(`🚀 服务器启动成功！`);
+        console.log(`🚀 兰溪招聘系统启动成功！`);
+        console.log(`🌐 访问地址: http://localhost:${PORT}`);
         console.log(`📱 API地址: http://localhost:${PORT}/api`);
         console.log(`🔍 健康检查: http://localhost:${PORT}/api/health`);
         console.log(`🌍 环境: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`📁 静态文件目录: ${staticPath}`);
       });
     } catch (error) {
       console.error('❌ 服务器启动失败:', error);

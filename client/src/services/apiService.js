@@ -1,5 +1,7 @@
-// API服务 - 替代Supabase
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+// API服务 - 整合版本（前后端同域）
+// 开发环境下，如果前端独立运行，API请求会通过Vite代理到后端
+// 生产环境下，前后端在同一个域名下，直接使用相对路径
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 class ApiService {
   constructor() {
