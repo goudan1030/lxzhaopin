@@ -11,35 +11,52 @@ NC='\033[0m'
 
 # 检查构建文件
 echo -e "${BLUE}📁 检查构建文件...${NC}"
-if [ -f "server/public/index.html" ]; then
+if [ -f "public/index.html" ]; then
     echo -e "${GREEN}✅ 前端构建文件存在${NC}"
 else
     echo -e "${RED}❌ 前端构建文件不存在，请先运行: npm run build${NC}"
     exit 1
 fi
 
-# 检查依赖
-echo -e "${BLUE}📦 检查依赖...${NC}"
-if [ ! -d "server/node_modules" ]; then
-    echo -e "${YELLOW}⚠️  后端依赖未安装，正在安装...${NC}"
-    cd server && npm install && cd ..
+# 检查源码文件
+echo -e "${BLUE}📂 检查源码结构...${NC}"
+if [ -d "src" ]; then
+    echo -e "${GREEN}✅ 前端源码目录存在${NC}"
+else
+    echo -e "${RED}❌ 前端源码目录不存在${NC}"
+    exit 1
 fi
 
-if [ ! -d "client/node_modules" ]; then
-    echo -e "${YELLOW}⚠️  前端依赖未安装，正在安装...${NC}"
-    cd client && npm install && cd ..
+if [ -f "app.js" ]; then
+    echo -e "${GREEN}✅ 后端主文件存在${NC}"
+else
+    echo -e "${RED}❌ 后端主文件不存在${NC}"
+    exit 1
+fi
+
+if [ -d "routes" ] && [ -d "config" ] && [ -d "middleware" ]; then
+    echo -e "${GREEN}✅ 后端目录结构正确${NC}"
+else
+    echo -e "${RED}❌ 后端目录结构不完整${NC}"
+    exit 1
+fi
+
+# 检查依赖
+echo -e "${BLUE}📦 检查依赖...${NC}"
+if [ ! -d "node_modules" ]; then
+    echo -e "${YELLOW}⚠️  依赖未安装，正在安装...${NC}"
+    npm install
 fi
 
 # 检查环境配置
 echo -e "${BLUE}🔧 检查环境配置...${NC}"
-if [ ! -f "server/.env" ]; then
+if [ ! -f ".env" ]; then
     echo -e "${YELLOW}⚠️  .env文件不存在，复制示例文件...${NC}"
-    cp server/env.example server/.env
+    cp .env.example .env 2>/dev/null || echo -e "${YELLOW}⚠️  .env.example文件不存在${NC}"
 fi
 
 # 测试数据库连接（如果可以的话）
 echo -e "${BLUE}🗄️ 检查数据库配置...${NC}"
-cd server
 node -e "
 const { testConnection } = require('./config/database');
 testConnection()
@@ -54,15 +71,14 @@ testConnection()
   });
 " 2>/dev/null || echo -e "${YELLOW}⚠️  无法测试数据库连接，请稍后手动验证${NC}"
 
-cd ..
-
 echo ""
 echo -e "${GREEN}🎉 整合系统检查完成！${NC}"
 echo ""
 echo -e "${YELLOW}📋 启动选项:${NC}"
 echo -e "  整合模式启动: ${BLUE}./start-integrated.sh${NC}"
-echo -e "  分离模式启动: ${BLUE}./start.sh${NC}"
 echo -e "  npm脚本启动: ${BLUE}npm run dev${NC}"
+echo -e "  前端开发模式: ${BLUE}npm run dev:frontend${NC}"
+echo -e "  后端开发模式: ${BLUE}npm run dev:backend${NC}"
 echo ""
 echo -e "${YELLOW}🔍 验证步骤:${NC}"
 echo -e "  1. 启动服务: ./start-integrated.sh"

@@ -24,62 +24,46 @@ fi
 
 # 获取当前脚本所在目录
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-SERVER_DIR="$SCRIPT_DIR/server"
-CLIENT_DIR="$SCRIPT_DIR/client"
 
 echo -e "${BLUE}📁 项目目录: $SCRIPT_DIR${NC}"
 
-# 检查目录是否存在
-if [ ! -d "$SERVER_DIR" ]; then
-    echo -e "${RED}❌ 后端目录不存在: $SERVER_DIR${NC}"
+# 检查项目文件是否存在
+if [ ! -f "$SCRIPT_DIR/app.js" ]; then
+    echo -e "${RED}❌ app.js文件不存在${NC}"
     exit 1
 fi
 
-if [ ! -d "$CLIENT_DIR" ]; then
-    echo -e "${RED}❌ 前端目录不存在: $CLIENT_DIR${NC}"
+if [ ! -d "$SCRIPT_DIR/src" ]; then
+    echo -e "${RED}❌ src目录不存在${NC}"
     exit 1
 fi
 
 # 安装依赖
 echo -e "${YELLOW}📦 检查并安装依赖...${NC}"
-
-# 安装后端依赖
-cd "$SERVER_DIR"
+cd "$SCRIPT_DIR"
 if [ ! -d "node_modules" ]; then
-    echo -e "${YELLOW}📦 安装后端依赖...${NC}"
+    echo -e "${YELLOW}📦 安装项目依赖...${NC}"
     npm install
     if [ $? -ne 0 ]; then
-        echo -e "${RED}❌ 后端依赖安装失败${NC}"
-        exit 1
-    fi
-fi
-
-# 安装前端依赖
-cd "$CLIENT_DIR"
-if [ ! -d "node_modules" ]; then
-    echo -e "${YELLOW}📦 安装前端依赖...${NC}"
-    npm install
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}❌ 前端依赖安装失败${NC}"
+        echo -e "${RED}❌ 依赖安装失败${NC}"
         exit 1
     fi
 fi
 
 # 检查环境变量文件
-if [ ! -f "$SERVER_DIR/.env" ]; then
-    echo -e "${YELLOW}⚠️  后端 .env 文件不存在，复制示例文件...${NC}"
-    if [ -f "$SERVER_DIR/env.example" ]; then
-        cp "$SERVER_DIR/env.example" "$SERVER_DIR/.env"
-        echo -e "${YELLOW}⚠️  请编辑 $SERVER_DIR/.env 文件配置数据库信息${NC}"
+if [ ! -f "$SCRIPT_DIR/.env" ]; then
+    echo -e "${YELLOW}⚠️  .env 文件不存在，复制示例文件...${NC}"
+    if [ -f "$SCRIPT_DIR/.env.example" ]; then
+        cp "$SCRIPT_DIR/.env.example" "$SCRIPT_DIR/.env"
+        echo -e "${YELLOW}⚠️  请编辑 $SCRIPT_DIR/.env 文件配置数据库信息${NC}"
         read -p "配置完成后按回车继续..."
     else
-        echo -e "${YELLOW}⚠️  env.example 文件不存在，将使用默认配置${NC}"
+        echo -e "${YELLOW}⚠️  .env.example 文件不存在，将使用默认配置${NC}"
     fi
 fi
 
 # 构建前端
 echo -e "${BLUE}🏗️  构建前端应用...${NC}"
-cd "$CLIENT_DIR"
 npm run build
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ 前端构建失败${NC}"
@@ -93,7 +77,6 @@ mkdir -p "$SCRIPT_DIR/logs"
 
 # 启动整合服务器
 echo -e "${BLUE}🚀 启动整合服务器...${NC}"
-cd "$SERVER_DIR"
 
 # 检查是否在生产模式运行
 if [ "$1" = "prod" ]; then

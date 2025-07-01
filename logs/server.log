@@ -5,7 +5,54 @@
 Ignoring invalid configuration option passed to Connection: acquireTimeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
 Ignoring invalid configuration option passed to Connection: timeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
 ✅ 数据库连接成功!
-🚀 服务器启动成功！
+🚀 兰溪招聘系统启动成功！
+🌐 访问地址: http://localhost:3000
 📱 API地址: http://localhost:3000/api
 🔍 健康检查: http://localhost:3000/api/health
 🌍 环境: development
+📁 静态文件目录: /Users/zwd/Downloads/workplace/lxZhaopin/server/public
+服务器错误: [Error: ENOENT: no such file or directory, stat '/Users/zwd/Downloads/workplace/lxZhaopin/server/public/index.html'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: '/Users/zwd/Downloads/workplace/lxZhaopin/server/public/index.html',
+  expose: false,
+  statusCode: 404,
+  status: 404
+}
+服务器错误: [Error: ENOENT: no such file or directory, stat '/Users/zwd/Downloads/workplace/lxZhaopin/server/public/index.html'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: '/Users/zwd/Downloads/workplace/lxZhaopin/server/public/index.html',
+  expose: false,
+  statusCode: 404,
+  status: 404
+}
+服务器错误: [Error: ENOENT: no such file or directory, stat '/Users/zwd/Downloads/workplace/lxZhaopin/server/public/index.html'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: '/Users/zwd/Downloads/workplace/lxZhaopin/server/public/index.html',
+  expose: false,
+  statusCode: 404,
+  status: 404
+}
+服务器错误: [Error: ENOENT: no such file or directory, stat '/Users/zwd/Downloads/workplace/lxZhaopin/server/public/index.html'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: '/Users/zwd/Downloads/workplace/lxZhaopin/server/public/index.html',
+  expose: false,
+  statusCode: 404,
+  status: 404
+}
+服务器错误: [Error: ENOENT: no such file or directory, stat '/Users/zwd/Downloads/workplace/lxZhaopin/server/public/index.html'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: '/Users/zwd/Downloads/workplace/lxZhaopin/server/public/index.html',
+  expose: false,
+  statusCode: 404,
+  status: 404
+}

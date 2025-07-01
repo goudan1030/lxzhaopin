@@ -10,7 +10,7 @@ logs/
 *.pid
 
 # 构建输出
-server/public/
+public/
 dist/
 build/
 
@@ -37,4 +37,8 @@ Thumbs.db
 
 # 备份文件
 *.bak
-*.backup 
+*.backup
+
+# 旧的前后端分离文件夹（整合后不再需要）
+client/
+server/ 
