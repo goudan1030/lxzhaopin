@@ -17,7 +17,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import JobCard from './JobCard.vue';
-import apiService from '../services/apiService';
+import { apiService } from '../services/index.js';
 
 const jobs = ref([]);
 const loading = ref(true);

@@ -26,7 +26,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import apiService from '../services/apiService';
+import { apiService } from '../services/index.js';
 
 const router = useRouter();
 

@@ -86,7 +86,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '../composables/useAuth';
 import { PullRefresh } from 'vant';
-import apiService from '../services/apiService';
+import { apiService } from '../services/index.js';
 
 const route = useRoute();
 const router = useRouter();

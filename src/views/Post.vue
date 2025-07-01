@@ -150,7 +150,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '../composables/useAuth';
 import { useLocalStorage } from '../composables/useLocalStorage';
 import { Toast } from 'vant';
-import apiService from '../services/apiService';
+import { apiService } from '../services/index.js';
 
 const router = useRouter();
 const route = useRoute();
