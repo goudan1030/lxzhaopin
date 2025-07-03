@@ -1,3 +1,9 @@
+# ⚠️ 注意：此配置文件已过时
+# 本项目已整合为单一的全栈应用（前端+Node.js后端）
+# Netlify无法运行Node.js后端，建议使用Vercel等全栈平台
+# 详见 NETLIFY-DEPLOYMENT.md
+
+# 如果必须使用Netlify，需要改回前后端分离架构
 [build]
   publish = "public"
   command = "npm run build"
@@ -5,13 +11,15 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# SPA路由重定向（仅适用于静态前端部署）
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-[[redirects]]
-  from = "/api/*"
-  to = "https://your-backend-url.com/api/:splat"
-  status = 200
-  force = true 
+# ⚠️ 以下API重定向配置已过时 - 需要外部API服务器
+# [[redirects]]
+#   from = "/api/*"
+#   to = "https://your-backend-url.com/api/:splat"
+#   status = 200
+#   force = true 
