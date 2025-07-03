@@ -3,7 +3,5 @@ process.env.VERCEL = true;
 
 const app = require('../app.js');
 
-// Vercel无服务器函数处理器
-module.exports = (req, res) => {
-  return app(req, res);
-}; 
+// 导出Express应用
+module.exports = app; 
